@@ -1,0 +1,22 @@
+{
+  "name": "speech-therapy-monorepo",
+  "private": true,
+  "packageManager": "pnpm@9",
+  "scripts": {
+    "dev:web": "pnpm --filter @app/web dev",
+    "dev:api": "pnpm --filter @app/api start:dev",
+    "dev": "concurrently -n WEB,API -c blue,magenta \"pnpm dev:web\" \"pnpm dev:api\"",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "format": "prettier -w ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
