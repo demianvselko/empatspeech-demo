@@ -2,4 +2,4 @@
 
 Comando para levantar el frontend:
 
-pnpm --filter @app/web dev
+pnpm --filter @app/frontend dev

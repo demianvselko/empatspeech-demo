@@ -2,9 +2,9 @@
   "name": "speech-therapy-monorepo",
   "private": true,
   "scripts": {
-    "dev:web": "pnpm --filter @app/web dev",
-    "dev:api": "pnpm --filter @app/api start:dev",
-    "dev": "concurrently -n WEB,API -c blue,magenta \"pnpm dev:web\" \"pnpm dev:api\"",
+    "dev:frontend": "pnpm --filter @app/frontend dev",
+    "dev:backend": "pnpm --filter @app/backend start:dev",
+    "dev": "concurrently -n frontend,API -c blue,magenta \"pnpm dev:frontend\" \"pnpm dev:backend\"",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "format": "prettier -w ."
