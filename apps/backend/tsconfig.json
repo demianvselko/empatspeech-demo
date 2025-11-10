@@ -16,18 +16,11 @@
     "baseUrl": "./",
     "strict": true,
     "paths": {
-      "@application/*": [
-        "src/application/*"
-      ],
-      "@domain/*": [
-        "src/domain/*"
-      ],
-      "@infrastructure/*": [
-        "src/infrastructure/*"
-      ],
-      "@interfaces/*": [
-        "src/interfaces/*"
-      ]
+      "@application/*": ["src/application/*"],
+      "@domain/*": ["src/domain/*"],
+      "@infrastructure/*": ["src/infrastructure/*"],
+      "@interfaces/*": ["src/interfaces/*"],
+      "@shared/*": ["src/shared/*"]
     },
     "incremental": true,
     "skipLibCheck": true,
@@ -37,12 +30,6 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
   },
-  "include": [
-    "src/**/*.ts",
-    "test/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }
