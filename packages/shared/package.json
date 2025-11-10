@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "lint": "echo \"ok\""
+    "lint": "echo \"ok\"",
+    "test": "jest --selectProjects shared",
+    "test:watch": "jest --selectProjects shared --watch",
+    "test:cov": "jest --selectProjects shared --coverage"
   },
   "dependencies": {
     "zod": "^3.23.8"
