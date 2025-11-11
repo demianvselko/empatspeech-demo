@@ -3,8 +3,8 @@ import {
   SessionAlreadyFinishedError,
   InvalidTrialError,
   InvalidSeedError,
+  SessionNotFoundError,
 } from '@domain/entities/session/errors/session.errors';
-import { SessionAlreadyEndedError } from '@domain/entities/session/errors/session-already-ended.error';
 
 describe('Session Domain Errors', () => {
   it('SameParticipantError', () => {
@@ -18,7 +18,7 @@ describe('Session Domain Errors', () => {
   it('SessionAlreadyFinishedError', () => {
     const err = new SessionAlreadyFinishedError('sess-1');
     expect(err.code).toBe('SESSION_ALREADY_FINISHED');
-    expect(err.message).toBe('Session is already finished');
+    expect(err.message).toBe('Session sess-1 is already finished');
   });
 
   it('InvalidTrialError', () => {
@@ -35,9 +35,9 @@ describe('Session Domain Errors', () => {
     );
   });
 
-  it('SessionAlreadyEndedError', () => {
-    const err = new SessionAlreadyEndedError();
-    expect(err.code).toBe('SESSION_ALREADY_ENDED');
-    expect(err.message).toBe('Session has already ended');
+  it('SessionNotFoundError', () => {
+    const err = new SessionNotFoundError('batata');
+    expect(err.code).toBe('SESSION_NOT_FOUND');
+    expect(err.message).toBe('Session not found batata');
   });
 });

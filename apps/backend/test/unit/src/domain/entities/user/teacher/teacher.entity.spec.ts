@@ -1,7 +1,7 @@
 import { Teacher } from '@domain/entities/user/teacher/teacher.entity';
 import { UserRole } from '@domain/entities/user/user-role.enum';
 import { UserRoleMismatchError } from '@domain/entities/user/errors/user.errors';
-import { makeUserProps } from '../user/_helpers';
+import { makeUserProps } from '../_helpers';
 
 describe('Teacher.create', () => {
   it('crea Teacher cuando role = Teacher', () => {

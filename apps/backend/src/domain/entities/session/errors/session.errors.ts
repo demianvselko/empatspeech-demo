@@ -1,6 +1,4 @@
-/* eslint-disable  @typescript-eslint/no-unused-vars */
 import { DomainError } from '@domain/shared/error/domain-error.base';
-
 export class SameParticipantError extends DomainError {
   constructor(
     public readonly slpId: string,
@@ -15,13 +13,21 @@ export class SameParticipantError extends DomainError {
 
 export class SessionAlreadyFinishedError extends DomainError {
   constructor(sessionId: string) {
-    super('Session is already finished', 'SESSION_ALREADY_FINISHED');
+    super(
+      `Session ${sessionId} is already finished`,
+      'SESSION_ALREADY_FINISHED',
+    );
   }
 }
 
 export class InvalidTrialError extends DomainError {
   constructor(reason: string) {
     super(`Invalid trial: ${reason}`, 'SESSION_INVALID_TRIAL');
+  }
+}
+export class SessionNotFoundError extends DomainError {
+  constructor(sessionId: string) {
+    super(`Session not found ${sessionId}`, 'SESSION_NOT_FOUND');
   }
 }
 
