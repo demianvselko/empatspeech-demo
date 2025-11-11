@@ -24,6 +24,6 @@ export class PinoLoggerAdapter implements LoggerPort {
     this.logger.warn(meta ?? {}, message);
   }
   error(message: string, meta?: LogMeta, err?: unknown): void {
-    this.logger.error({ ...(meta ?? {}), err }, message);
+    this.logger.error({ ...meta, err }, message);
   }
 }
