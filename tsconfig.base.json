@@ -4,8 +4,13 @@
     "moduleResolution": "node",
     "strict": true,
     "baseUrl": ".",
+    "resolveJsonModule": true,
     "paths": {
-      "@shared/*": ["packages/shared/src/*"]
+      "@shared/*": ["packages/shared/src/*"],
+      "@domain/*": ["apps/backend/src/domain/*"],
+      "@application/*": ["apps/backend/src/application/*"],
+      "@infrastructure/*": ["apps/backend/src/infrastructure/*"],
+      "@interfaces/*": ["apps/backend/src/interfaces/*"]
     }
   }
 }

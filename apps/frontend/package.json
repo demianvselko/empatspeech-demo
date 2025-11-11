@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
-    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix"
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "test": "jest --selectProjects frontend",
+    "test:watch": "jest --selectProjects frontend --watch",
+    "test:cov": "jest --selectProjects frontend --coverage"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
