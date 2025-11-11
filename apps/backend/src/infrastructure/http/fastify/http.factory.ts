@@ -3,13 +3,16 @@ import {
   FastifyAdapter,
   type NestFastifyApplication,
 } from '@nestjs/platform-fastify';
-import { AppModule } from '../app.module';
-import { registerFastifyPlugins } from './server.plugins';
-import { applyGlobalNestStuff } from './server.setup';
+import { AppModule } from '../../../app.module';
+import { registerFastifyPlugins } from './http.plugins';
+import { applyHttpAppSetup } from './http.setup';
 
-export class ServerFactory {
+export class HttpServerFactory {
   static async create(): Promise<NestFastifyApplication> {
-    const adapter = new FastifyAdapter({ trustProxy: true });
+    const adapter = new FastifyAdapter({
+      trustProxy: true,
+    });
+
     const app = await NestFactory.create<NestFastifyApplication>(
       AppModule,
       adapter,
@@ -19,8 +22,7 @@ export class ServerFactory {
     );
 
     await registerFastifyPlugins(app);
-
-    applyGlobalNestStuff(app);
+    applyHttpAppSetup(app);
 
     return app;
   }

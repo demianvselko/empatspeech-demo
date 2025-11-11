@@ -1,10 +1,16 @@
-import { ServerFactory } from './shared/server.factory';
-import { loadAndValidateEnv } from './shared/config';
+// main.ts
+import { HttpServerFactory } from './infrastructure/http/fastify/http.factory';
+import { env } from './config/env';
+import { applyWsAppSetup } from '@infrastructure/http/ws/ws.setup';
 
-async function bootstrap() {
-  const env = loadAndValidateEnv();
-  const app = await ServerFactory.create();
-  await app.listen({ host: env.HOST, port: env.PORT });
-  console.log(`🚀 Server running on http://${env.HOST}:${env.PORT}/api`);
+async function bootstrap(): Promise<void> {
+  const e = env();
+  const app = await HttpServerFactory.create();
+
+  applyWsAppSetup(app);
+
+  await app.listen({ host: e.HOST, port: e.PORT });
+  console.log(`🚀 Server running on http://${e.HOST}:${e.PORT}/api`);
 }
-bootstrap();
+
+void bootstrap();

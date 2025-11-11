@@ -1,11 +1,13 @@
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
-import { AllExceptionsFilter } from './http-exception.filter';
-import { LoggingInterceptor } from './logging.interceptor';
 
-export function applyGlobalNestStuff(app: NestFastifyApplication) {
+export function applyHttpAppSetup(app: NestFastifyApplication): void {
   app.setGlobalPrefix('api');
-  app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
+
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '1',
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -15,9 +17,6 @@ export function applyGlobalNestStuff(app: NestFastifyApplication) {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
-
-  app.useGlobalFilters(new AllExceptionsFilter());
-  app.useGlobalInterceptors(new LoggingInterceptor());
 
   app.enableShutdownHooks();
 }
