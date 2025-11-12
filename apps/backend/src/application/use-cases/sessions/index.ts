@@ -6,3 +6,4 @@ export * from './dtos/append-trial.dto';
 export * from './dtos/patch-notes.dto';
 export * from './dtos/finish-session.dto';
 export * from './dtos/session.view';
+export * from './patch-notes.uc';

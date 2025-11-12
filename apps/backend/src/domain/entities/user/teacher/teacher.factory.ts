@@ -3,7 +3,7 @@ import { BaseError } from '@domain/shared/error/base.error';
 import { Teacher } from './teacher.entity';
 import { UserFactory } from '../user.factory';
 import { UserRole } from '../user-role.enum';
-import { UserProps, UserPrimitives } from '../user.props';
+import { UserPrimitives } from '../user.props';
 import { UserRoleMismatchError } from '../errors/user.errors';
 
 export class TeacherFactory {
@@ -11,12 +11,9 @@ export class TeacherFactory {
     if (dto.role !== UserRole.Teacher) {
       return Result.fail(new UserRoleMismatchError(UserRole.Teacher, dto.role));
     }
-
-    const baseRes = UserFactory.fromPrimitives(dto);
-    if (baseRes.isFailure()) return Result.fail(baseRes.getErrors());
-
-    const base = baseRes.getValue();
-    return Teacher.create(base['props'] as UserProps);
+    const propsRes = UserFactory.buildPropsFromPrimitives(dto);
+    if (propsRes.isFailure()) return Result.fail(propsRes.getErrors());
+    return Teacher.create(propsRes.getValue());
   }
 
   static newQuick(input: {
@@ -29,8 +26,17 @@ export class TeacherFactory {
       role: UserRole.Teacher,
     });
     if (baseRes.isFailure()) return Result.fail(baseRes.getErrors());
-    const base = baseRes.getValue();
-
-    return Teacher.create(base['props'] as UserProps);
+    const u = baseRes.getValue().toPrimitives();
+    const propsRes = UserFactory.buildPropsFromPrimitives({
+      id: u.id,
+      active: u.active,
+      createdAt: u.createdAtIso,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      role: UserRole.Teacher,
+    });
+    if (propsRes.isFailure()) return Result.fail(propsRes.getErrors());
+    return Teacher.create(propsRes.getValue());
   }
 }

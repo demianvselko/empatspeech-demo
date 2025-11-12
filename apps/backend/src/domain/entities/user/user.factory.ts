@@ -13,25 +13,21 @@ class UserBase extends User {
   private constructor(props: UserProps) {
     super(props);
   }
-
   static create(props: UserProps): Result<UserBase, BaseError> {
     return Result.ok(new UserBase(props));
   }
 }
 
 export class UserFactory {
-  static fromProps(props: UserProps): Result<User, BaseError> {
-    return UserBase.create(props);
-  }
-
-  static fromPrimitives(dto: UserPrimitives): Result<User, BaseError> {
+  static buildPropsFromPrimitives(
+    dto: UserPrimitives,
+  ): Result<UserProps, BaseError> {
     const baseRes = basePropsFromPrimitives({
       entityId: dto.id,
       isActive: dto.active,
       createdAt: dto.createdAt,
     });
     if (baseRes.isFailure()) return Result.fail(baseRes.getErrors());
-    const base = baseRes.getValue();
 
     const firstRes = StringVO.from(dto.firstName, {
       fieldName: 'firstName',
@@ -53,14 +49,24 @@ export class UserFactory {
     if (emailRes.isFailure()) return Result.fail(emailRes.getErrors());
 
     const props: UserProps = Object.freeze({
-      ...base,
+      ...baseRes.getValue(),
       firstName: firstRes.getValue(),
       lastName: lastRes.getValue(),
       email: emailRes.getValue(),
       role: dto.role,
     });
 
+    return Result.ok(props);
+  }
+
+  static fromProps(props: UserProps): Result<User, BaseError> {
     return UserBase.create(props);
+  }
+
+  static fromPrimitives(dto: UserPrimitives): Result<User, BaseError> {
+    const propsRes = this.buildPropsFromPrimitives(dto);
+    if (propsRes.isFailure()) return Result.fail(propsRes.getErrors());
+    return UserBase.create(propsRes.getValue());
   }
 
   static newQuick(input: {

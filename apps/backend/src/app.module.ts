@@ -2,14 +2,13 @@ import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { HealthModule } from './interfaces/http/health.module';
-
 import { APP_LOGGER } from './core/logging/logger.tokens';
 import type { LoggerPort } from './core/logging/logger.port';
 import { PinoLoggerAdapter } from './infrastructure/logger/pino-logger.adapter';
-
 import { AllExceptionsFilter } from './core/http/filters/all-exceptions.filter';
 import { HttpLoggingInterceptor } from './core/http/interceptors/http-logging.interceptor';
 import { RequestIdMiddleware } from './core/middleware/request-id.middleware';
+import { MongoPersistenceModule } from './infrastructure/persistence/database/mongoose/mongoose.module';
 
 @Module({
   imports: [
@@ -17,6 +16,8 @@ import { RequestIdMiddleware } from './core/middleware/request-id.middleware';
       isGlobal: true,
       envFilePath: `.env.${process.env.STAGE ?? 'local'}`,
     }),
+
+    MongoPersistenceModule,
     HealthModule,
   ],
   providers: [
