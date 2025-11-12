@@ -9,11 +9,6 @@ import { User } from './user.abstract';
 import { UserProps, UserPrimitives } from './user.props';
 import { EmailVO, StringVO } from '@domain/shared/valid-objects';
 
-/**
- * Implementación mínima concreta sobre la clase abstracta.
- * Sirve como "base" genérica de User para tests o usos sin subtipos.
- * Cuando crees Student/Teacher, podés replicar patrón con validación de role.
- */
 class UserBase extends User {
   private constructor(props: UserProps) {
     super(props);

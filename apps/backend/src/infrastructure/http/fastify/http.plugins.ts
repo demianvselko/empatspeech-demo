@@ -3,12 +3,12 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import compress from '@fastify/compress';
 import rateLimit from '@fastify/rate-limit';
-import { env } from '../../../config/env';
+import { env } from '@config/env';
 
 type RegisterFn = (
   plugin: unknown,
   opts?: Record<string, unknown>,
-) => PromiseLike<unknown> | unknown;
+) => void | Promise<void>;
 
 type FastifyLike = { register: RegisterFn };
 
@@ -16,7 +16,6 @@ export async function registerFastifyPlugins(
   app: NestFastifyApplication,
 ): Promise<void> {
   const fastify = app.getHttpAdapter().getInstance() as unknown as FastifyLike;
-
   const e = env();
 
   await fastify.register(helmet, {});

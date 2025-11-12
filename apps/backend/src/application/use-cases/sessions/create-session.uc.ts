@@ -1,24 +1,55 @@
-// import { Injectable } from '@nestjs/common';
-// import { Result } from '@domain/shared/result/result';
-// import { BaseError } from '@domain/shared/error/base.error';
-// import { SessionFactory } from '@domain/entities/session/session.factory';
-// import { Session } from '@domain/entities/session/session.entity';
-// import { SessionRepositoryPort } from '@domain/ports/repository/session-repository.port';
+import { UseCase } from '@application/contracts/usecase.interface';
+import { Result } from '@domain/shared/result/result';
+import { BaseError } from '@domain/shared/error/base.error';
+import { SessionRepositoryPort } from '@domain/ports/repository/session-repository.port';
+import { SessionFactory } from '@domain/entities/session/session.factory';
+import {
+  CreateSessionInput,
+  CreateSessionOutput,
+} from './dtos/create-session.dto';
+import {
+  SameParticipantError,
+  InvalidSeedError,
+} from '@domain/entities/session/errors/session.errors';
+import { SeedVO } from '@domain/entities/session/validate-objects/seed.vo';
 
-// type Input = Readonly<{ slpId: string; studentId: string; seed?: number }>;
+export class CreateSessionUC
+  implements UseCase<CreateSessionInput, CreateSessionOutput>
+{
+  constructor(private readonly sessions: SessionRepositoryPort) {}
+  async execute(
+    input: CreateSessionInput,
+  ): Promise<Result<CreateSessionOutput, BaseError>> {
+    if (input.slpId === input.studentId) {
+      return Result.fail(
+        new SameParticipantError(input.slpId, input.studentId),
+      );
+    }
 
-// @Injectable()
-// export class CreateSessionUC {
-//     constructor(private readonly sessions: SessionRepositoryPort) { }
+    if (input.seed !== undefined) {
+      const seedRes = SeedVO.fromNumber(input.seed);
+      if (seedRes.isFailure()) {
+        return Result.fail(new InvalidSeedError(input.seed));
+      }
+    }
 
-//     async exec(input: Input): Promise<Result<Session, BaseError>> {
-//         const sessionR = SessionFactory.newQuick(input);
-//         if (sessionR.isFailure()) return Result.fail(sessionR.getErrors());
+    const newRes = SessionFactory.newQuick({
+      slpId: input.slpId,
+      studentId: input.studentId,
+      seed: input.seed,
+      notes: input.notes,
+    });
+    if (newRes.isFailure()) return Result.fail(newRes.getErrors());
 
-//         const s = sessionR.getValue();
-//         const saved = await this.sessions.create(s);
-//         if (saved.isFailure()) return Result.fail(saved.getErrors());
+    const entity = newRes.getValue();
 
-//         return Result.ok(s);
-//     }
-// }
+    const saved = await this.sessions.save(entity);
+    if (saved.isFailure()) return Result.fail(saved.getErrors());
+
+    return Result.ok({
+      sessionId: entity.sessionId.valueAsString,
+      seed: entity.seed,
+      createdAtIso: entity.createdAtVO.valueAsIsoString,
+    });
+  }
+}

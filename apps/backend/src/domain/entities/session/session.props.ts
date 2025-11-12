@@ -1,15 +1,16 @@
 import { BaseProps } from '@domain/base/base-props.type';
-import { CreatedAtVO, StringVO, UuidVO } from '@domain/shared/valid-objects';
+import { UuidVO, StringVO } from '@domain/shared/valid-objects';
+import { FinishedAtVO } from './validate-objects/finished-at.vo';
 
-export type Trial = Readonly<{ correct: boolean; ts: number }>;
+export type Trial = Readonly<{ correct: boolean; tsEpochMs: number }>;
 
 export type SessionProps = Readonly<
   BaseProps & {
-    slpId: UuidVO;
-    studentId: UuidVO;
+    slpId: UuidVO; // Teacher.userId
+    studentId: UuidVO; // Student.userId
     seed: number;
+    finishedAt?: FinishedAtVO;
     notes?: StringVO;
-    endedAt?: CreatedAtVO;
     trials: Trial[];
   }
 >;
@@ -22,7 +23,7 @@ export type SessionPrimitives = Readonly<{
   slpId: string;
   studentId: string;
   seed: number;
+  finishedAt?: Date | string | number;
   notes?: string;
-  endedAt?: Date | string | number;
-  trials?: Trial[];
+  trials?: Array<{ correct: boolean; tsEpochMs: number }>;
 }>;

@@ -7,13 +7,15 @@ import {
 
 import { Session } from './session.entity';
 import { SessionProps, SessionPrimitives, Trial } from './session.props';
-import { CreatedAtVO, StringVO, UuidVO } from '@domain/shared/valid-objects';
+import { StringVO, UuidVO } from '@domain/shared/valid-objects';
+import { FinishedAtVO } from './validate-objects/finished-at.vo';
 
 export class SessionFactory {
   static newQuick(input: {
     slpId: string;
     studentId: string;
     seed?: number;
+    notes?: string;
   }): Result<Session, BaseError> {
     const base = basePropsFactory();
     if (base.isFailure()) return Result.fail(base.getErrors());
@@ -23,13 +25,28 @@ export class SessionFactory {
     const stu = UuidVO.fromString(input.studentId);
     if (stu.isFailure()) return Result.fail(stu.getErrors());
 
+    let notesVO: StringVO | undefined;
+    if (input.notes !== undefined) {
+      const r = StringVO.from(input.notes, {
+        fieldName: 'notes',
+        minLength: 0,
+        maxLength: 2_000,
+        trim: true,
+      });
+      if (r.isFailure()) return Result.fail(r.getErrors());
+      const vo = r.getValue();
+      notesVO = vo.valueAsString.length ? vo : undefined;
+    }
+
     const props: SessionProps = {
       ...base.getValue(),
       slpId: slp.getValue(),
       studentId: stu.getValue(),
       seed: input.seed ?? Math.floor(Math.random() * 1_000_000),
+      notes: notesVO,
       trials: [],
     };
+
     return Result.ok(new Session(props));
   }
 
@@ -55,17 +72,23 @@ export class SessionFactory {
         trim: true,
       });
       if (r.isFailure()) return Result.fail(r.getErrors());
-      notesVO = r.getValue();
+      const vo = r.getValue();
+      notesVO = vo.valueAsString.length ? vo : undefined;
     }
 
-    let endedAtVO: CreatedAtVO | undefined;
-    if (dto.endedAt !== undefined) {
-      const r = CreatedAtVO.from(new Date(dto.endedAt));
+    let finishedAtVO: FinishedAtVO | undefined;
+    if (dto.finishedAt !== undefined) {
+      const r = FinishedAtVO.from(dto.finishedAt, base.getValue().createdAt);
       if (r.isFailure()) return Result.fail(r.getErrors());
-      endedAtVO = r.getValue();
+      finishedAtVO = r.getValue();
     }
 
-    const trials: Trial[] = Array.isArray(dto.trials) ? dto.trials.slice() : [];
+    const trials: Trial[] = Array.isArray(dto.trials)
+      ? dto.trials.map((t) => ({
+          correct: !!t.correct,
+          tsEpochMs: Math.trunc(t.tsEpochMs),
+        }))
+      : [];
 
     const props: SessionProps = {
       ...base.getValue(),
@@ -73,7 +96,7 @@ export class SessionFactory {
       studentId: stu.getValue(),
       seed: dto.seed,
       notes: notesVO,
-      endedAt: endedAtVO,
+      finishedAt: finishedAtVO,
       trials,
     };
     return Result.ok(new Session(props));

@@ -10,7 +10,9 @@
       "@domain/*": ["apps/backend/src/domain/*"],
       "@application/*": ["apps/backend/src/application/*"],
       "@infrastructure/*": ["apps/backend/src/infrastructure/*"],
-      "@interfaces/*": ["apps/backend/src/interfaces/*"]
+      "@interfaces/*": ["apps/backend/src/interfaces/*"],
+      "@core/*": ["apps/backend/src/core/*"],
+      "@config/*": ["apps/backend/src/config/*"]
     }
   }
 }

@@ -33,7 +33,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:backend": "jest --selectProjects backend",
+    "test:backend": "jest --selectProjects backend --coverage",
     "test:shared": "jest --selectProjects shared",
     "test:frontend": "jest --selectProjects frontend",
     "format": "prettier -w .",
