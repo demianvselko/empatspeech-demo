@@ -1,10 +1,35 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { HealthModule } from './shared/health.module';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { HealthModule } from './interfaces/http/health.module';
+
+import { APP_LOGGER } from './core/logging/logger.tokens';
+import type { LoggerPort } from './core/logging/logger.port';
+import { PinoLoggerAdapter } from './infrastructure/logger/pino-logger.adapter';
+
+import { AllExceptionsFilter } from './core/http/filters/all-exceptions.filter';
+import { HttpLoggingInterceptor } from './core/http/interceptors/http-logging.interceptor';
+import { RequestIdMiddleware } from './core/middleware/request-id.middleware';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), HealthModule],
-  // controllers: [AppController],
-  // providers: [AppService],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: `.env.${process.env.STAGE ?? 'local'}`,
+    }),
+    HealthModule,
+  ],
+  providers: [
+    {
+      provide: APP_LOGGER,
+      useFactory: (): LoggerPort => new PinoLoggerAdapter(),
+    },
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    { provide: APP_INTERCEPTOR, useClass: HttpLoggingInterceptor },
+  ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
+  }
+}

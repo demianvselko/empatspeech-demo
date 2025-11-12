@@ -30,19 +30,22 @@
     "lint": "pnpm -r lint",
     "lint:frontend": "pnpm --filter @app/frontend lint",
     "lint:backend": "pnpm --filter @app/backend lint",
-    "test": "pnpm -r test",
-    "test:frontend": "pnpm --filter @app/frontend test",
-    "test:backend": "pnpm --filter @app/backend test",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:backend": "jest --selectProjects backend",
+    "test:shared": "jest --selectProjects shared",
+    "test:frontend": "jest --selectProjects frontend",
     "format": "prettier -w .",
     "prepare": "husky"
   },
   "lint-staged": {
     "apps/backend/**/*.{ts,js}": [
-      "pnpm -F @app/backend run lint -- --fix",
+      "pnpm -F @app/backend run lint:fix",
       "prettier -w"
     ],
     "apps/frontend/**/*.{ts,tsx,js,jsx}": [
-      "pnpm -F @app/frontend run lint:eslint -- --fix",
+      "pnpm -F @app/frontend run lint:fix",
       "prettier -w"
     ],
     "*.{json,md,yml,yaml,css,scss,html}": [
@@ -50,12 +53,23 @@
     ]
   },
   "devDependencies": {
+    "@swc/jest": "^0.2.39",
+    "@types/cors": "^2.8.19",
+    "@types/jest": "^30.0.0",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "dotenv-cli": "^11.0.0",
     "husky": "^9.1.7",
+    "jest": "^30.2.0",
     "lint-staged": "^16.2.6",
     "prettier": "^3.6.2",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.5",
+    "ts-node": "^10.9.2",
     "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.1",
+    "uuid": "^13.0.0"
   }
 }

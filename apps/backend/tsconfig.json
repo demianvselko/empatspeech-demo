@@ -20,7 +20,8 @@
       "@domain/*": ["src/domain/*"],
       "@infrastructure/*": ["src/infrastructure/*"],
       "@interfaces/*": ["src/interfaces/*"],
-      "@shared/*": ["src/shared/*"]
+      "@shared/*": ["src/shared/*"],
+      "@core/*": ["core/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

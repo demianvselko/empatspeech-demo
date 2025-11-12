@@ -1,10 +1,16 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { FastifyAdapter } from '@nestjs/platform-fastify';
+// main.ts
+import { HttpServerFactory } from './infrastructure/http/fastify/http.factory';
+import { env } from './config/env';
+import { applyWsAppSetup } from '@infrastructure/http/ws/ws.setup';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule, new FastifyAdapter());
-  app.setGlobalPrefix('api');
-  await app.listen(4000, '0.0.0.0');
+async function bootstrap(): Promise<void> {
+  const e = env();
+  const app = await HttpServerFactory.create();
+
+  applyWsAppSetup(app);
+
+  await app.listen({ host: e.HOST, port: e.PORT });
+  console.log(`🚀 Server running on http://${e.HOST}:${e.PORT}/api`);
 }
-bootstrap();
+
+void bootstrap();
