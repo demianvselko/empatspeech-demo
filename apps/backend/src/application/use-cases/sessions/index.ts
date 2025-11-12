@@ -1,6 +1,5 @@
 export * from './create-session.uc';
 export * from './append-trial.uc';
-export * from './patch-notes.uc';
 export * from './finish-session.uc';
 export * from './dtos/create-session.dto';
 export * from './dtos/append-trial.dto';
