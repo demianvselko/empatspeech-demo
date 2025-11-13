@@ -55,6 +55,8 @@
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.0.0",
+    "@fastify/swagger": "^9.6.0",
+    "@fastify/swagger-ui": "^5.2.3",
     "@swc/jest": "^0.2.39",
     "@types/cors": "^2.8.19",
     "@types/jest": "^30.0.0",
@@ -71,6 +73,7 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
+    "@nestjs/swagger": "^11.2.1",
     "socket.io": "^4.8.1",
     "uuid": "^13.0.0"
   }
