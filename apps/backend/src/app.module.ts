@@ -11,6 +11,7 @@ import { AllExceptionsFilter } from './core/http/filters/all-exceptions.filter';
 import { HttpLoggingInterceptor } from './core/http/interceptors/http-logging.interceptor';
 import { RequestIdMiddleware } from './core/middleware/request-id.middleware';
 import { MongoPersistenceModule } from './infrastructure/persistence/database/mongoose/mongoose.module';
+import { SessionsWsModule } from '@interfaces/ws/sessions-ws.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { MongoPersistenceModule } from './infrastructure/persistence/database/mo
     MongoPersistenceModule,
     HealthModule,
     SessionsModule,
+    SessionsWsModule,
   ],
   providers: [
     {
