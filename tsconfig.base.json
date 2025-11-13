@@ -6,6 +6,7 @@
     "baseUrl": ".",
     "resolveJsonModule": true,
     "paths": {
+      "@shared/types": ["packages/shared/src"],
       "@shared/*": ["packages/shared/src/*"],
       "@domain/*": ["apps/backend/src/domain/*"],
       "@application/*": ["apps/backend/src/application/*"],

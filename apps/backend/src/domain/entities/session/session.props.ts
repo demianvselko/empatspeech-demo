@@ -16,10 +16,9 @@ export type SessionProps = Readonly<
 >;
 
 export type SessionPrimitives = Readonly<{
-  id?: string;
+  id: string;
   active?: boolean;
   createdAt?: Date | string | number;
-
   slpId: string;
   studentId: string;
   seed: number;

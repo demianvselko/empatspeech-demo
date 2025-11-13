@@ -2,10 +2,11 @@
   "name": "speech-therapy-monorepo",
   "private": true,
   "scripts": {
-    "dev:frontend:dev": "cross-env STAGE=development NODE_ENV=development dotenv -e apps/frontend/.env.development -- pnpm --filter @app/frontend dev",
+    "dev:frontend:dev": "cross-env STAGE=dev NODE_ENV=dev dotenv -e apps/frontend/.env.dev -- pnpm --filter @app/frontend dev",
     "dev:frontend:staging": "cross-env STAGE=staging NODE_ENV=production dotenv -e apps/frontend/.env.staging -- pnpm --filter @app/frontend dev",
     "dev:frontend:prod": "cross-env STAGE=production NODE_ENV=production dotenv -e apps/frontend/.env.production -- pnpm --filter @app/frontend dev",
-    "dev:backend:dev": "cross-env STAGE=development NODE_ENV=development dotenv -e apps/backend/.env.development -- pnpm --filter @app/backend start:dev",
+    "dev:backend:local": "cross-env STAGE=local NODE_ENV=local dotenv -e apps/backend/.env.local -- pnpm --filter @app/backend start:dev",
+    "dev:backend:dev": "cross-env STAGE=dev NODE_ENV=dev dotenv -e apps/backend/.env.dev -- pnpm --filter @app/backend start:dev",
     "dev:backend:staging": "cross-env STAGE=staging NODE_ENV=production dotenv -e apps/backend/.env.staging -- pnpm --filter @app/backend start:dev",
     "dev:backend:prod": "cross-env STAGE=production NODE_ENV=production dotenv -e apps/backend/.env.production -- pnpm --filter @app/backend start:dev",
     "dev:dev": "concurrently -n FRONT,BACK -c blue,magenta \"pnpm dev:frontend:dev\" \"pnpm dev:backend:dev\"",
@@ -37,6 +38,8 @@
     "test:shared": "jest --selectProjects shared",
     "test:frontend": "jest --selectProjects frontend",
     "format": "prettier -w .",
+    "db:up": "pnpm -F @app/backend db:up",
+    "db:down": "pnpm -F @app/backend db:down",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -53,6 +56,10 @@
     ]
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "@fastify/swagger": "^9.6.0",
+    "@fastify/swagger-ui": "^5.2.3",
     "@swc/jest": "^0.2.39",
     "@types/cors": "^2.8.19",
     "@types/jest": "^30.0.0",
@@ -69,6 +76,7 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
+    "@nestjs/swagger": "^11.2.1",
     "socket.io": "^4.8.1",
     "uuid": "^13.0.0"
   }

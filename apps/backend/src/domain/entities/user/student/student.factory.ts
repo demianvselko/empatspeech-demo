@@ -29,8 +29,17 @@ export class StudentFactory {
       role: UserRole.Student,
     });
     if (baseRes.isFailure()) return Result.fail(baseRes.getErrors());
-    const base = baseRes.getValue();
-
-    return Student.create(base['props'] as UserProps);
+    const u = baseRes.getValue().toPrimitives();
+    const propsRes = UserFactory.buildPropsFromPrimitives({
+      id: u.id,
+      active: u.active,
+      createdAt: u.createdAtIso,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      role: UserRole.Student,
+    });
+    if (propsRes.isFailure()) return Result.fail(propsRes.getErrors());
+    return Student.create(propsRes.getValue());
   }
 }

@@ -29,5 +29,4 @@ declare global {
   var __envMock: jest.Mock<EnvShape, []>;
 }
 
-// asignación sin `any`
 (globalThis as unknown as { __envMock: typeof envMock }).__envMock = envMock;
