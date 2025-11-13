@@ -1,6 +1,7 @@
 import { BaseEntity } from '@domain/base/base.entity';
 import { SessionProps, Trial } from './session.props';
-import { CreatedAtVO, StringVO, UuidVO } from '@domain/shared/valid-objects';
+import { CreatedAtVO, UuidVO, StringVO } from '@domain/shared/valid-objects';
+import { FinishedAtVO } from './validate-objects/finished-at.vo';
 
 export class Session extends BaseEntity {
   constructor(private readonly props: SessionProps) {
@@ -19,11 +20,14 @@ export class Session extends BaseEntity {
   get seed(): number {
     return this.props.seed;
   }
+  get createdAtVO(): CreatedAtVO {
+    return this.props.createdAt;
+  }
+  get finishedAt(): FinishedAtVO | undefined {
+    return this.props.finishedAt;
+  }
   get notes(): StringVO | undefined {
     return this.props.notes;
-  }
-  get endedAt(): CreatedAtVO | undefined {
-    return this.props.endedAt;
   }
   get trials(): readonly Trial[] {
     return this.props.trials;
@@ -35,20 +39,42 @@ export class Session extends BaseEntity {
     return Math.round((correct / this.props.trials.length) * 100);
   }
 
-  withTrial(correct: boolean, atMs: number): Session {
+  withTrial(correct: boolean, atEpochMs: number): Session {
     const updated: SessionProps = {
       ...this.props,
-      trials: [...this.props.trials, { correct, ts: atMs }],
+      trials: [
+        ...this.props.trials,
+        { correct, tsEpochMs: Math.trunc(atEpochMs) },
+      ],
     };
     return new Session(updated);
   }
 
-  withNotes(notes: StringVO): Session {
-    return new Session({ ...this.props, notes });
+  withNotes(rawNotes: string | undefined): Session {
+    if (rawNotes === undefined) {
+      return new Session({ ...this.props, notes: undefined });
+    }
+    const normalized = rawNotes ?? '';
+    const r = StringVO.from(normalized, {
+      fieldName: 'notes',
+      minLength: 0,
+      maxLength: 2_000,
+      trim: true,
+    });
+    if (r.isFailure()) {
+      throw r.getErrors();
+    }
+    const vo = r.getValue();
+    const updated: SessionProps = {
+      ...this.props,
+      notes: vo.valueAsString.length ? vo : undefined,
+    };
+    return new Session(updated);
   }
 
-  ended(at: CreatedAtVO): Session {
-    return new Session({ ...this.props, endedAt: at });
+  finish(at: FinishedAtVO): Session {
+    const updated: SessionProps = { ...this.props, finishedAt: at };
+    return new Session(updated);
   }
 
   toPrimitives(): Readonly<{
@@ -60,22 +86,24 @@ export class Session extends BaseEntity {
     studentId: string;
     seed: number;
     notes?: string;
-    endedAtIso?: string;
-    endedAtEpochMs?: number;
+    finishedAtIso?: string;
+    finishedAtEpochMs?: number;
     trials: Trial[];
+    accuracyPercent: number;
   }> {
-    return {
+    return Object.freeze({
       id: this.sessionId.valueAsString,
       active: this.isActive,
-      createdAtIso: this.createdAt.valueAsIsoString,
-      createdAtEpochMs: this.createdAt.valueAsEpochMs,
+      createdAtIso: this.createdAtVO.valueAsIsoString,
+      createdAtEpochMs: this.createdAtVO.valueAsEpochMs,
       slpId: this.slpId.valueAsString,
       studentId: this.studentId.valueAsString,
       seed: this.seed,
       notes: this.notes?.valueAsString,
-      endedAtIso: this.endedAt?.valueAsIsoString,
-      endedAtEpochMs: this.endedAt?.valueAsEpochMs,
+      finishedAtIso: this.finishedAt?.valueAsIsoString,
+      finishedAtEpochMs: this.finishedAt?.valueAsEpochMs,
       trials: [...this.trials],
-    };
+      accuracyPercent: this.accuracyPercent,
+    });
   }
 }

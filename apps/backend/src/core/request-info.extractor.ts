@@ -15,8 +15,8 @@ export function extractRequestInfo(ctx: ExecutionContext): RequestInfo {
     url?: string;
     ip?: string;
     headers?: Record<string, unknown>;
-    id?: string; // fastify
-    socket?: { remoteAddress?: string }; // express
+    id?: string;
+    socket?: { remoteAddress?: string };
     [k: string]: unknown;
   }>();
 

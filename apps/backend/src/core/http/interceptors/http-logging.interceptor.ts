@@ -8,7 +8,7 @@ import {
 import { Observable, tap } from 'rxjs';
 import { APP_LOGGER } from '../../logging/logger.tokens';
 import type { LoggerPort } from '../../logging/logger.port';
-import { extractRequestInfo } from 'src/core/request-info.extractor';
+import { extractRequestInfo } from '@core/request-info.extractor';
 
 @Injectable()
 export class HttpLoggingInterceptor<T> implements NestInterceptor<T, T> {
