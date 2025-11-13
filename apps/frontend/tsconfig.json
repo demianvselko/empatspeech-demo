@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": ["es6", "scripthost", "dom", "dom.iterable", "esnext"],
+    "typeRoots": ["./node_modules/phaser/types"],
+    "types": ["Phaser"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,7 +21,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@shared/types": ["../../packages/shared/types"],
+      "@shared/*": ["../../packages/shared/types/*"]
     }
   },
   "include": [
@@ -28,7 +32,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    ".next/dev/dev/types/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

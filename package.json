@@ -2,6 +2,7 @@
   "name": "speech-therapy-monorepo",
   "private": true,
   "scripts": {
+    "dev:frontend:local": "cross-env STAGE=local NODE_ENV=local dotenv -e apps/frontend/.env.dev -- pnpm --filter @app/frontend dev",
     "dev:frontend:dev": "cross-env STAGE=dev NODE_ENV=dev dotenv -e apps/frontend/.env.dev -- pnpm --filter @app/frontend dev",
     "dev:frontend:staging": "cross-env STAGE=staging NODE_ENV=production dotenv -e apps/frontend/.env.staging -- pnpm --filter @app/frontend dev",
     "dev:frontend:prod": "cross-env STAGE=production NODE_ENV=production dotenv -e apps/frontend/.env.production -- pnpm --filter @app/frontend dev",

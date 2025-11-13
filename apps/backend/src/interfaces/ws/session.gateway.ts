@@ -1,3 +1,4 @@
+// apps/backend/src/interfaces/ws/session.gateway.ts
 import {
   ConnectedSocket,
   MessageBody,
@@ -7,7 +8,9 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import { Inject } from '@nestjs/common';
 import type { Server, Socket } from 'socket.io';
+
 import type { SessionRepositoryPort } from '@domain/ports/repository/session-repository.port';
 import { AppendTrialUC } from '@application/use-cases/sessions/append-trial.uc';
 import { PatchNotesUC } from '@application/use-cases/sessions/patch-notes.uc';
@@ -23,7 +26,6 @@ import type {
 } from '@shared/types';
 import { WsEvents, GameStateSchema } from '@shared/types';
 import { BaseError } from '@domain/shared/error/base.error';
-import { Inject } from '@nestjs/common';
 import { SESSION_REPOSITORY_TOKEN } from '@infrastructure/persistence/database/mongoose/tokens';
 
 @WebSocketGateway({
@@ -36,8 +38,9 @@ export class SessionGateway
   @WebSocketServer()
   server!: Server;
 
-  // in-memory map sólo para log de conexiones por sesión
   private readonly sessionRooms = new Map<string, Set<string>>();
+  private readonly sessionTurns = new Map<string, 'slp' | 'student'>();
+  private readonly sessionMatches = new Map<string, Set<string>>(); // cardIds
 
   constructor(
     @Inject(SESSION_REPOSITORY_TOKEN)
@@ -52,9 +55,6 @@ export class SessionGateway
       id: client.id,
       nsp: client.nsp?.name,
     });
-    // Por ahora solo logueamos, sin auth real
-    // Podrías leer client.handshake.auth más adelante
-    // console.log('WS connected', client.id);
   }
 
   handleDisconnect(client: Socket): void {
@@ -66,13 +66,11 @@ export class SessionGateway
     }
   }
 
-  // ----- session:join -----
   @SubscribeMessage(WsEvents.SessionJoinIn)
   async handleSessionJoin(
     @MessageBody() payload: SessionJoinIn,
     @ConnectedSocket() client: Socket,
   ): Promise<void> {
-    // Validación mínima de IDs (dominio)
     const sessionIdRes = UuidVO.fromString(payload.sessionId);
     const userIdRes = UuidVO.fromString(payload.userId);
     if (sessionIdRes.isFailure() || userIdRes.isFailure()) {
@@ -105,16 +103,18 @@ export class SessionGateway
       return;
     }
 
-    // Join room por sessionId
     client.join(payload.sessionId);
     this.addClientToRoom(payload.sessionId, client.id);
 
-    // Emitimos el estado actual a todos en la room
-    const state = this.buildGameState(session);
+    if (!this.sessionTurns.has(payload.sessionId)) {
+      this.sessionTurns.set(payload.sessionId, 'slp');
+    }
+    const currentTurn = this.sessionTurns.get(payload.sessionId) ?? 'slp';
+
+    const state = this.buildGameState(session, currentTurn);
     this.server.to(payload.sessionId).emit(WsEvents.GameStateOut, state);
   }
 
-  // ----- game:move -----
   @SubscribeMessage(WsEvents.GameMoveIn)
   async handleGameMove(
     @MessageBody() payload: GameMoveIn,
@@ -140,7 +140,7 @@ export class SessionGateway
       return;
     }
 
-    const currentTurn = this.getCurrentTurn(session);
+    const currentTurn = this.sessionTurns.get(payload.sessionId) ?? 'slp';
     const isSlp = session.slpId.valueAsString === payload.userId;
     const isStudent = session.studentId.valueAsString === payload.userId;
 
@@ -166,7 +166,22 @@ export class SessionGateway
       return;
     }
 
-    // Re-leer sesión para construir nuevo estado
+    // si hubo acierto, guardamos las cartas encontradas
+    if (payload.correct && payload.cards) {
+      const set =
+        this.sessionMatches.get(payload.sessionId) ?? new Set<string>();
+      for (const cardId of payload.cards) {
+        set.add(cardId);
+      }
+      this.sessionMatches.set(payload.sessionId, set);
+    }
+
+    let nextTurn: 'slp' | 'student' = currentTurn;
+    if (!payload.correct) {
+      nextTurn = currentTurn === 'slp' ? 'student' : 'slp';
+    }
+    this.sessionTurns.set(payload.sessionId, nextTurn);
+
     const updatedResult = await this.sessionsRepo.findById(
       sessionIdRes.getValue(),
     );
@@ -180,11 +195,10 @@ export class SessionGateway
       return;
     }
 
-    const state = this.buildGameState(updated);
+    const state = this.buildGameState(updated, nextTurn);
     this.server.to(payload.sessionId).emit(WsEvents.GameStateOut, state);
   }
 
-  // ----- session:note -----
   @SubscribeMessage(WsEvents.SessionNoteIn)
   async handleSessionNote(
     @MessageBody() payload: SessionNoteIn,
@@ -205,7 +219,6 @@ export class SessionGateway
       return;
     }
 
-    // Leer sesión actualizada
     const updatedResult = await this.sessionsRepo.findById(
       sessionIdRes.getValue(),
     );
@@ -219,11 +232,11 @@ export class SessionGateway
       return;
     }
 
-    const state = this.buildGameState(updated);
+    const currentTurn = this.sessionTurns.get(payload.sessionId) ?? 'slp';
+    const state = this.buildGameState(updated, currentTurn);
     this.server.to(payload.sessionId).emit(WsEvents.GameStateOut, state);
   }
 
-  // ----- session:finish -----
   @SubscribeMessage(WsEvents.SessionFinishIn)
   async handleSessionFinish(
     @MessageBody() payload: SessionFinishIn,
@@ -256,11 +269,10 @@ export class SessionGateway
       return;
     }
 
-    const state = this.buildGameState(updated);
+    const currentTurn = this.sessionTurns.get(payload.sessionId) ?? 'slp';
+    const state = this.buildGameState(updated, currentTurn);
     this.server.to(payload.sessionId).emit(WsEvents.GameStateOut, state);
   }
-
-  // ---------- Helpers privados ----------
 
   private addClientToRoom(sessionId: string, clientId: string): void {
     const set = this.sessionRooms.get(sessionId) ?? new Set<string>();
@@ -268,14 +280,12 @@ export class SessionGateway
     this.sessionRooms.set(sessionId, set);
   }
 
-  private getCurrentTurn(session: Session): 'slp' | 'student' {
-    const totalTrials = session.trials.length;
-    return totalTrials % 2 === 0 ? 'slp' : 'student';
-  }
-
-  private buildGameState(session: Session): GameState {
+  private buildGameState(
+    session: Session,
+    currentTurn: 'slp' | 'student',
+  ): GameState {
     const p = session.toPrimitives();
-    const currentTurn = this.getCurrentTurn(session);
+    const matchedSet = this.sessionMatches.get(p.id);
 
     const state: GameState = {
       sessionId: p.id,
@@ -287,9 +297,9 @@ export class SessionGateway
       notes: p.notes,
       createdAtIso: p.createdAtIso,
       finishedAtIso: p.finishedAtIso,
+      matchedCardIds: matchedSet ? [...matchedSet] : [],
     };
 
-    // Validamos contra Zod por si algo raro pasa
     return GameStateSchema.parse(state);
   }
 

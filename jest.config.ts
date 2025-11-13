@@ -6,6 +6,7 @@ const config: Config = {
     rootDir: '.',
     testMatch: ['**/*.spec.ts'],
     moduleFileExtensions: ['ts', 'js'],
+    passWithNoTests: true,
     projects: [
         '<rootDir>/apps/backend/jest.config.ts',
         '<rootDir>/packages/shared/jest.config.ts',
