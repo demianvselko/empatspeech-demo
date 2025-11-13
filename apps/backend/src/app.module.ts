@@ -2,6 +2,8 @@ import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { HealthModule } from './interfaces/http/health.module';
+import { SessionsModule } from './interfaces/http/sessions.module';
+
 import { APP_LOGGER } from './core/logging/logger.tokens';
 import type { LoggerPort } from './core/logging/logger.port';
 import { PinoLoggerAdapter } from './infrastructure/logger/pino-logger.adapter';
@@ -16,9 +18,9 @@ import { MongoPersistenceModule } from './infrastructure/persistence/database/mo
       isGlobal: true,
       envFilePath: `.env.${process.env.STAGE ?? 'local'}`,
     }),
-
     MongoPersistenceModule,
     HealthModule,
+    SessionsModule,
   ],
   providers: [
     {

@@ -7,7 +7,7 @@ import {
   ListCaseloadUC,
 } from '@application/queries/list-caseload.query';
 
-@Controller('api/slp')
+@Controller('slp')
 export class CaseloadController {
   constructor(private readonly listCaseloadUC: ListCaseloadUC) {}
 

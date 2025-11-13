@@ -22,7 +22,6 @@ import { ListCaseloadUC } from '@application/queries/list-caseload.query';
   imports: [MongoPersistenceModule],
   controllers: [SessionsController, ProfilesController, CaseloadController],
   providers: [
-    // UCs
     {
       provide: CreateSessionUC,
       useFactory: (sessions: SessionRepositoryPort) =>

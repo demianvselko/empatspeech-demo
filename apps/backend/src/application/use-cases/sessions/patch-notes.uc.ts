@@ -20,22 +20,27 @@ export class PatchNotesUC
     const found = await this.sessions.findById(idRes.getValue());
     if (found.isFailure()) return Result.fail(found.getErrors());
     const session = found.getValue();
-    if (!session)
+    if (!session) {
       return Result.fail(
         new SessionNotFoundError(idRes.getValue().valueAsString),
       );
+    }
 
-    let notes: string | undefined = undefined;
+    let notes: string | undefined;
     if (typeof input.notes === 'string') {
-      const nv = StringVO.from(input.notes, {
-        fieldName: 'notes',
-        minLength: 0,
-        maxLength: 2000,
-        trim: true,
-      });
-      if (nv.isFailure()) return Result.fail(nv.getErrors());
-      const normalized = nv.getValue().valueAsString;
-      notes = normalized.length ? normalized : undefined;
+      const trimmed = input.notes.trim();
+      if (trimmed.length === 0) {
+        notes = undefined;
+      } else {
+        const nv = StringVO.from(trimmed, {
+          fieldName: 'notes',
+          minLength: 1,
+          maxLength: 2000,
+          trim: false,
+        });
+        if (nv.isFailure()) return Result.fail(nv.getErrors());
+        notes = nv.getValue().valueAsString;
+      }
     }
 
     const next = session.withNotes(notes);

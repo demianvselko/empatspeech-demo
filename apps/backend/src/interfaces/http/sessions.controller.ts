@@ -20,7 +20,7 @@ import type {
   PatchNotesOutput,
 } from '@application/use-cases/sessions/dtos/patch-notes.dto';
 
-@Controller('api/sessions')
+@Controller('sessions')
 export class SessionsController {
   constructor(
     private readonly createSession: CreateSessionUC,

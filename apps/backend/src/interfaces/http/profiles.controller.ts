@@ -7,7 +7,7 @@ import {
   GetStudentProfileUC,
 } from '@application/queries/get-student-profile.query';
 
-@Controller('api/students')
+@Controller('students')
 export class ProfilesController {
   constructor(private readonly getProfile: GetStudentProfileUC) {}
 
