@@ -1,8 +1,8 @@
 export type CreateSessionInput = Readonly<{
-  slpId: string; // Teacher id
-  studentId: string; // Student id
-  seed?: number; // opcional; si no, se genera random determinista
-  notes?: string; // opcional
+  slpId: string;
+  studentId: string;
+  seed?: number;
+  notes?: string;
 }>;
 
 export type CreateSessionOutput = Readonly<{

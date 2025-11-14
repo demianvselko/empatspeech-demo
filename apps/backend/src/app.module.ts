@@ -12,6 +12,7 @@ import { HttpLoggingInterceptor } from './core/http/interceptors/http-logging.in
 import { RequestIdMiddleware } from './core/middleware/request-id.middleware';
 import { MongoPersistenceModule } from './infrastructure/persistence/database/mongoose/mongoose.module';
 import { SessionsWsModule } from '@interfaces/ws/sessions-ws.module';
+import { AuthModule } from '@infrastructure/auth/auth.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { SessionsWsModule } from '@interfaces/ws/sessions-ws.module';
     HealthModule,
     SessionsModule,
     SessionsWsModule,
+    AuthModule,
   ],
   providers: [
     {

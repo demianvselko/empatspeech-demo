@@ -1,4 +1,3 @@
-// apps/backend/src/interfaces/ws/session.gateway.ts
 import {
   ConnectedSocket,
   MessageBody,
@@ -40,7 +39,7 @@ export class SessionGateway
 
   private readonly sessionRooms = new Map<string, Set<string>>();
   private readonly sessionTurns = new Map<string, 'slp' | 'student'>();
-  private readonly sessionMatches = new Map<string, Set<string>>(); // cardIds
+  private readonly sessionMatches = new Map<string, Set<string>>();
 
   constructor(
     @Inject(SESSION_REPOSITORY_TOKEN)
@@ -166,7 +165,6 @@ export class SessionGateway
       return;
     }
 
-    // si hubo acierto, guardamos las cartas encontradas
     if (payload.correct && payload.cards) {
       const set =
         this.sessionMatches.get(payload.sessionId) ?? new Set<string>();

@@ -1,20 +1,28 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as jwtTypes from '@infrastructure/auth/jwt.types';
+import type { AppRole, JwtPayload } from '@infrastructure/auth/jwt.types';
+import { emailToUserId } from '@infrastructure/auth/email-user-id.util';
 
-@Controller('api/v1/auth')
+type LoginBody = {
+  email: string;
+  role: AppRole;
+};
+
+@Controller('auth')
 export class AuthController {
-  constructor(private readonly jwt: JwtService) {}
+  constructor(private readonly jwtService: JwtService) {}
 
   @Post('login')
-  @HttpCode(200)
-  login(@Body() body: jwtTypes.JwtLoginInput): { accessToken: string } {
-    const payload: jwtTypes.JwtPayload = {
-      sub: body.userId,
+  async login(@Body() body: LoginBody): Promise<{ accessToken: string }> {
+    const userId = emailToUserId(body.email);
+
+    const payload: JwtPayload = {
+      sub: userId,
       role: body.role,
       email: body.email,
     };
-    const accessToken = this.jwt.sign(payload);
+
+    const accessToken = this.jwtService.sign(payload);
     return { accessToken };
   }
 }
