@@ -21,7 +21,9 @@
       "@infrastructure/*": ["src/infrastructure/*"],
       "@interfaces/*": ["src/interfaces/*"],
       "@core/*": ["src/core/*"],
-      "@config/*": ["src/config/*"]
+      "@config/*": ["src/config/*"],
+      "@shared/types": ["../../packages/shared/src"],
+      "@shared/*": ["../../packages/shared/src/*"]
     },
     "incremental": true,
     "skipLibCheck": true,
