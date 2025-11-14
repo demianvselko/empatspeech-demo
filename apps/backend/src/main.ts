@@ -9,9 +9,14 @@ async function bootstrap(): Promise<void> {
 
   applyWsAppSetup(app);
   applySwagger(app);
-  await app.listen({ host: e.HOST, port: e.PORT });
-  console.log(`🚀 Server running on http://${e.HOST}:${e.PORT}/api`);
-  console.log(`📘 Swagger UI: http://${e.HOST}:${e.PORT}/api/docs`);
+
+  const port = Number(process.env.PORT ?? e.PORT);
+  const host = e.HOST;
+
+  await app.listen({ host, port });
+
+  console.log(`🚀 Server running on http://${host}:${port}/api`);
+  console.log(`📘 Swagger UI: http://${host}:${port}/api/docs`);
 }
 
 void bootstrap();
