@@ -30,6 +30,7 @@ export default function NewSessionPage() {
   const [studentEmail, setStudentEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [seed, setSeed] = useState("");
+  const [meetingUrl, setMeetingUrl] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,10 +49,10 @@ export default function NewSessionPage() {
 
     try {
       if (!accessToken || !user) {
-        throw new Error("No estás autenticado");
+        throw new Error("You are not authenticated.");
       }
       if (user.role !== "Teacher") {
-        throw new Error("Solo Teachers pueden crear sesiones");
+        throw new Error("Only Teachers can create sessions.");
       }
 
       const baseUrl =
@@ -75,19 +76,18 @@ export default function NewSessionPage() {
       if (!res.ok) {
         const errBody = await res.json().catch(() => null);
         console.error("create session error body:", errBody);
-        throw new Error("No se pudo crear la sesión");
+        throw new Error("Failed to create the session");
       }
 
       const data = (await res.json()) as CreateSessionResponse;
       setResult(data);
 
-      const teacherUserId = user.userId;
+      const trimmedMeetingUrl = meetingUrl.trim();
+      const meetingQuery = trimmedMeetingUrl
+        ? `?meetingUrl=${encodeURIComponent(trimmedMeetingUrl)}`
+        : "";
 
-      router.push(
-        `/sessions/${data.sessionId}/play?userId=${encodeURIComponent(
-          teacherUserId,
-        )}`,
-      );
+      router.push(`/sessions/${data.sessionId}/play${meetingQuery}`);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -98,7 +98,7 @@ export default function NewSessionPage() {
   if (isLoading || !user || !accessToken) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-900">
-        <p className="text-slate-200">Verificando sesión...</p>
+        <p className="text-slate-200">Checking session...</p>
       </main>
     );
   }
@@ -109,7 +109,7 @@ export default function NewSessionPage() {
         <Card className="w-full max-w-md bg-slate-800 text-white border-slate-700">
           <CardHeader>
             <CardTitle className="text-center text-xl">
-              IOnly Teachers pueden crear sesiones
+              Only Teachers can create sessions
             </CardTitle>
           </CardHeader>
           <CardFooter>
@@ -126,17 +126,17 @@ export default function NewSessionPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-900">
+    <main className="flex min-h-screen items-center justify-center bg-slate-900 px-4">
       <Card className="w-full max-w-lg bg-slate-800 text-white border-slate-700">
         <CardHeader>
           <CardTitle className="text-xl text-center">
-            Create a new Session
+            Create a new session
           </CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="studentEmail">Email student</Label>
+            <Label htmlFor="studentEmail">Student email</Label>
             <Input
               id="studentEmail"
               type="email"
@@ -149,8 +149,26 @@ export default function NewSessionPage() {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="meetingUrl">
+              Video call URL (optional, Meet / Zoom / Jitsi / etc.)
+            </Label>
+            <Input
+              id="meetingUrl"
+              type="url"
+              placeholder="https://meet.jit.si/your-room or https://meet.google.com/..."
+              className="bg-white text-black"
+              value={meetingUrl}
+              onChange={(e) => setMeetingUrl(e.target.value)}
+            />
+            <p className="text-xs text-slate-300">
+              Create the call in your preferred provider, then paste the URL
+              here. For Jitsi, you can directly define a room URL.
+            </p>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="seed">
-              Seed (optional, for a Table with specific cards)
+              Seed (optional, for a board with specific cards)
             </Label>
             <Input
               id="seed"
@@ -186,7 +204,7 @@ export default function NewSessionPage() {
                 </p>
               )}
               <p>
-                <span className="font-semibold">Creada en:</span>{" "}
+                <span className="font-semibold">Created at:</span>{" "}
                 {result.createdAtIso}
               </p>
             </div>
@@ -199,7 +217,7 @@ export default function NewSessionPage() {
             onClick={handleCreateSession}
             disabled={loading}
           >
-            {loading ? "Creating..." : "create session"}
+            {loading ? "Creating..." : "Create session"}
           </Button>
 
           <Button
@@ -207,7 +225,7 @@ export default function NewSessionPage() {
             className="w-full border-slate-600 text-slate-200"
             onClick={() => router.push("/home")}
           >
-            back to Home
+            Back to Home
           </Button>
         </CardFooter>
       </Card>
