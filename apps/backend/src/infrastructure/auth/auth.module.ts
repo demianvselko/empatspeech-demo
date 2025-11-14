@@ -13,8 +13,8 @@ import { AuthController } from '@interfaces/http/auth.controller';
         expiresIn: (() => {
           const env = process.env.JWT_EXPIRATION_TIME || '3600';
           const parsed = env.endsWith('s')
-            ? parseInt(env.slice(0, -1), 10)
-            : parseInt(env, 10);
+            ? Number.parseInt(env.slice(0, -1), 10)
+            : Number.parseInt(env, 10);
           return Number.isNaN(parsed) ? 3600 : parsed;
         })(),
       },

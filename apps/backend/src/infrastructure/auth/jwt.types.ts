@@ -9,7 +9,6 @@ export type JwtPayload = Readonly<{
 }>;
 
 export type JwtLoginInput = Readonly<{
-  userId: string;
   role: AppRole;
   email?: string;
 }>;

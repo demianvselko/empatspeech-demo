@@ -1,8 +1,19 @@
-import { Controller, Post, Param, Body, Patch } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import type { FastifyRequest } from 'fastify';
+
 import { CreateSessionUC } from '@application/use-cases/sessions/create-session.uc';
 import { AppendTrialUC } from '@application/use-cases/sessions/append-trial.uc';
 import { FinishSessionUC } from '@application/use-cases/sessions/finish-session.uc';
 import { PatchNotesUC } from '@application/use-cases/sessions/patch-notes.uc';
+
 import { Result } from '@domain/shared/result/result';
 import { BaseError } from '@domain/shared/error/base.error';
 
@@ -20,6 +31,21 @@ import type {
   PatchNotesOutput,
 } from '@application/use-cases/sessions/dtos/patch-notes.dto';
 
+import { JwtAuthGuard } from '@infrastructure/auth/jwt-auth.guard';
+import { RolesGuard } from '@infrastructure/auth/roles.guard';
+import { Roles } from '@infrastructure/auth/roles.decorator';
+import type { JwtPayload } from '@infrastructure/auth/jwt.types';
+import { emailToUserId } from '@infrastructure/auth/email-user-id.util';
+
+type AuthedRequest = FastifyRequest & { user: JwtPayload };
+
+type CreateSessionBody = {
+  studentEmail: string;
+  notes?: string;
+  seed?: number;
+};
+
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('sessions')
 export class SessionsController {
   constructor(
@@ -30,12 +56,30 @@ export class SessionsController {
   ) {}
 
   @Post()
-  async create(@Body() body: CreateSessionInput): Promise<CreateSessionOutput> {
-    const result = await this.createSession.execute(body);
+  @Roles('Teacher')
+  async create(
+    @Req() req: AuthedRequest,
+    @Body() body: CreateSessionBody,
+  ): Promise<CreateSessionOutput> {
+    const { sub, email: teacherEmail } = req.user;
+
+    const slpId = sub;
+
+    const studentId = emailToUserId(body.studentEmail);
+
+    const input: CreateSessionInput = {
+      slpId,
+      studentId,
+      notes: body.notes,
+      seed: body.seed,
+    };
+
+    const result = await this.createSession.execute(input);
     return this.unwrap<CreateSessionOutput>(result);
   }
 
   @Post(':id/trials')
+  @Roles('Teacher', 'Student')
   async addTrial(
     @Param('id') id: string,
     @Body() body: Omit<AppendTrialInput, 'sessionId'>,
@@ -48,12 +92,14 @@ export class SessionsController {
   }
 
   @Post(':id/finish')
+  @Roles('Teacher')
   async finish(@Param('id') id: string): Promise<FinishSessionOutput> {
     const result = await this.finishSession.execute({ sessionId: id });
     return this.unwrap<FinishSessionOutput>(result);
   }
 
   @Patch(':id/notes')
+  @Roles('Teacher')
   async updateNotes(
     @Param('id') id: string,
     @Body() body: Omit<PatchNotesInput, 'sessionId'>,
