@@ -74,7 +74,7 @@ export function createMemotestScene(
     }
 
     private setupSocket(): void {
-      this.socket = io("ws://localhost:4000/ws", {
+      this.socket = io(process.env.NEXT_PUBLIC_WS_URL, {
         transports: ["websocket"],
       });
 
