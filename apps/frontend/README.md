@@ -34,3 +34,11 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+curl -X POST <http://localhost:4000/api/v1/auth/login> -H "Content-Type: application/json" -d '{
+"userId": "slp-1111-2222-3333-4444",
+"role": "Teacher",
+"email": "<slp@example.com>"
+}'
+
+{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzbHAtMTExMS0yMjIyLTMzMzMtNDQ0NCIsInJvbGUiOiJUZWFjaGVyIiwiZW1haWwiOiJzbHBAZXhhbXBsZS5jb20iLCJpYXQiOjE3NjMwOTU0NTcsImV4cCI6MTc2MzA5OTA1N30.etaJnYgUZ7q1x-jRdfTYGmSmlb_nHGg9tCSKPBLqkjM"}

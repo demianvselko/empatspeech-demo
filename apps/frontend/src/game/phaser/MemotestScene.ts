@@ -1,4 +1,3 @@
-// apps/frontend/src/game/phaser/MemotestScene.ts
 import type * as PhaserNS from "phaser";
 import { io, type Socket } from "socket.io-client";
 import {
@@ -10,10 +9,11 @@ import {
 import {
   type Difficulty,
   difficultyPresets,
-  pickPairs,
   shuffleDeterministic,
   type CardOnBoard,
 } from "./types";
+import { ANIMALS_DECK_ES } from "@/shared/cards/animalsDeck";
+import type { GameCard } from "@/shared/cards/types";
 
 type SceneDeps = {
   sessionId: string;
@@ -45,6 +45,13 @@ export function createMemotestScene(
     private turnText?: PhaserNS.GameObjects.Text;
     private accuracyText?: PhaserNS.GameObjects.Text;
 
+    private totalPairs = 0;
+    private finished = false;
+
+    private gameOverOverlay?: PhaserNS.GameObjects.Rectangle;
+    private gameOverTitle?: PhaserNS.GameObjects.Text;
+    private gameOverStats?: PhaserNS.GameObjects.Text;
+
     constructor() {
       super("MemotestScene");
     }
@@ -56,7 +63,15 @@ export function createMemotestScene(
 
     update(): void {}
 
-    // ---------- Socket ----------
+    preload(): void {
+      const imageCards = ANIMALS_DECK_ES.filter(
+        (c) => c.type === "image" && c.imageUrl,
+      );
+
+      for (const card of imageCards) {
+        this.load.image(card.pairKey, card.imageUrl);
+      }
+    }
 
     private setupSocket(): void {
       this.socket = io("ws://localhost:4000/ws", {
@@ -94,9 +109,8 @@ export function createMemotestScene(
       }
 
       this.applyMatchedFromState(state);
+      this.checkGameFinished(state);
     }
-
-    // ---------- Helpers de rol/turno ----------
 
     private getMyRole(state: GameState): Role {
       if (state.slpId === userId) return "slp";
@@ -109,7 +123,12 @@ export function createMemotestScene(
       return role !== "unknown" && state.currentTurn === role;
     }
 
-    // ---------- HUD ----------
+    private inferWinnerRole(state: GameState): Role {
+      if (!state.matchedCardIds || state.matchedCardIds.length === 0) {
+        return "unknown";
+      }
+      return state.currentTurn as Role;
+    }
 
     private createHud(): void {
       this.infoText = this.add
@@ -155,43 +174,62 @@ export function createMemotestScene(
       );
     }
 
-    // ---------- Tablero ----------
-
     private buildBoard(sessionIdSeed: string, diff: Difficulty): void {
       const cfg = difficultyPresets[diff];
-      const pairs = pickPairs(cfg.pairCount);
+
+      const pairsMap = new Map<string, { image?: GameCard; word?: GameCard }>();
+
+      for (const card of ANIMALS_DECK_ES) {
+        const current = pairsMap.get(card.pairKey) ?? {};
+        if (card.type === "image") current.image = card;
+        if (card.type === "word") current.word = card;
+        pairsMap.set(card.pairKey, current);
+      }
+
+      let pairs = Array.from(pairsMap.entries())
+        .filter(([, v]) => v.image && v.word)
+        .map(([pairId, v]) => ({
+          pairId,
+          imageCard: v.image as GameCard,
+          wordCard: v.word as GameCard,
+        }));
+
+      pairs = shuffleDeterministic(pairs, sessionIdSeed).slice(
+        0,
+        cfg.pairCount,
+      );
+      this.totalPairs = pairs.length;
 
       const tempCards: CardOnBoard[] = [];
-      for (const pair of pairs) {
-        const pairId = `pair-${pair.word}`;
 
+      for (const pair of pairs) {
         tempCards.push(
           {
-            id: `${pairId}-img`,
-            label: pair.icon,
-            pairId,
+            id: `${pair.pairId}-img`,
+            pairId: pair.pairId,
             kind: "image",
             x: 0,
             y: 0,
             faceUp: true,
             matched: false,
+            textureKey: pair.imageCard.pairKey,
           },
           {
-            id: `${pairId}-txt`,
-            label: pair.word,
-            pairId,
+            id: `${pair.pairId}-txt`,
+            pairId: pair.pairId,
             kind: "text",
             x: 0,
             y: 0,
             faceUp: true,
             matched: false,
+            text: pair.wordCard.label,
           },
         );
       }
 
       const shuffled = shuffleDeterministic(tempCards, sessionIdSeed);
-      const { width, height } = this.scale;
 
+      const { width, height } = this.scale;
       const cardW = 110;
       const cardH = 130;
       const totalCols = cfg.cols;
@@ -215,7 +253,6 @@ export function createMemotestScene(
 
       this.renderCards();
 
-      // mostrar todas 5s y luego ocultar
       this.time.delayedCall(5000, () => {
         for (const card of this.cards) {
           if (!card.matched) {
@@ -229,18 +266,42 @@ export function createMemotestScene(
     private renderCards(): void {
       for (const card of this.cards) {
         const container = this.add.container(card.x, card.y);
+
         const rect = this.add.rectangle(0, 0, 100, 120, 0x1f2937, 1);
         rect.setStrokeStyle(3, 0x38bdf8);
 
-        const label = this.add.text(0, 0, card.faceUp ? card.label : "?", {
+        let face: PhaserNS.GameObjects.Text | PhaserNS.GameObjects.Image;
+
+        if (card.kind === "image") {
+          const img = this.add.image(0, 0, card.textureKey ?? "");
+          img.setDisplaySize(80, 80);
+          face = img;
+        } else {
+          const text = this.add.text(0, 0, card.text ?? "", {
+            fontFamily: "sans-serif",
+            fontSize: "22px",
+            color: "#f9fafb",
+            align: "center",
+          });
+          text.setOrigin(0.5);
+          face = text;
+        }
+
+        const back = this.add.text(0, 0, "?", {
           fontFamily: "sans-serif",
           fontSize: "22px",
           color: "#f9fafb",
+          align: "center",
         });
-        label.setOrigin(0.5);
+        back.setOrigin(0.5);
+
+        face.setVisible(card.faceUp);
+        back.setVisible(!card.faceUp);
 
         container.add(rect);
-        container.add(label);
+        container.add(face);
+        container.add(back);
+
         container.setSize(100, 120);
         container.setInteractive({ useHandCursor: true });
         container.on("pointerdown", () => this.handleCardClick(card.id));
@@ -254,8 +315,9 @@ export function createMemotestScene(
         const container = this.cardSprites.get(card.id);
         if (!container) continue;
 
-        const [rect, label] = container.list as [
+        const [rect, face, back] = container.list as [
           PhaserNS.GameObjects.Rectangle,
+          PhaserNS.GameObjects.Text | PhaserNS.GameObjects.Image,
           PhaserNS.GameObjects.Text,
         ];
 
@@ -264,7 +326,17 @@ export function createMemotestScene(
           continue;
         }
 
-        label.setText(card.faceUp ? card.label : "?");
+        if (card.kind === "image") {
+          const img = face as PhaserNS.GameObjects.Image;
+          img.setVisible(card.faceUp);
+          back.setVisible(!card.faceUp);
+        } else {
+          const faceText = face as PhaserNS.GameObjects.Text;
+          faceText.setText(card.text ?? "");
+          faceText.setVisible(card.faceUp);
+          back.setVisible(!card.faceUp);
+        }
+
         rect.setFillStyle(card.faceUp ? 0x1e293b : 0x020617, 1);
       }
     }
@@ -283,9 +355,91 @@ export function createMemotestScene(
       this.updateCardSprites();
     }
 
-    // ---------- Input ----------
+    private checkGameFinished(state: GameState): void {
+      if (this.finished) return;
+      if (!this.totalPairs) return;
+
+      const matchedCardsCount = state.matchedCardIds?.length ?? 0;
+      const matchedPairs = matchedCardsCount / 2;
+
+      if (matchedPairs >= this.totalPairs) {
+        this.finished = true;
+        this.showGameOverOverlay(state);
+      }
+    }
+
+    private showGameOverOverlay(state: GameState): void {
+      const { width, height } = this.scale;
+
+      const myRole = this.getMyRole(state);
+      const winnerRole = this.inferWinnerRole(state);
+
+      let title = "Juego terminado";
+      if (myRole !== "unknown") {
+        if (winnerRole === "unknown") {
+          title = "Juego terminado";
+        } else if (myRole === winnerRole) {
+          title = "¡Ganaste! 🎉";
+        } else {
+          title = "Perdiste 😢";
+        }
+      }
+
+      this.gameOverOverlay = this.add
+        .rectangle(width / 2, height / 2, width, height, 0x020617, 0.85)
+        .setDepth(20)
+        .setAlpha(0);
+
+      this.gameOverTitle = this.add
+        .text(width / 2, height / 2 - 40, title, {
+          fontFamily: "sans-serif",
+          fontSize: "40px",
+          color: "#f9fafb",
+        })
+        .setOrigin(0.5)
+        .setDepth(21)
+        .setAlpha(0)
+        .setScale(0.8);
+
+      const statsText = `Trials: ${state.totalTrials}\nAccuracy: ${state.accuracyPercent}%`;
+      this.gameOverStats = this.add
+        .text(width / 2, height / 2 + 20, statsText, {
+          fontFamily: "sans-serif",
+          fontSize: "22px",
+          color: "#e5e7eb",
+          align: "center",
+        })
+        .setOrigin(0.5)
+        .setDepth(21)
+        .setAlpha(0);
+
+      this.tweens.add({
+        targets: this.gameOverOverlay,
+        alpha: 1,
+        duration: 400,
+        ease: "Quad.easeOut",
+      });
+
+      this.tweens.add({
+        targets: this.gameOverTitle,
+        alpha: 1,
+        scale: 1,
+        duration: 500,
+        ease: "Back.Out",
+        delay: 200,
+      });
+
+      this.tweens.add({
+        targets: this.gameOverStats,
+        alpha: 1,
+        duration: 400,
+        ease: "Quad.easeOut",
+        delay: 450,
+      });
+    }
 
     private handleCardClick(cardId: string): void {
+      if (this.finished) return;
       if (!this.gameState) return;
       if (!this.isMyTurn(this.gameState)) return;
       if (this.inputLocked) return;
@@ -302,7 +456,6 @@ export function createMemotestScene(
         const [first, second] = this.openCards;
         const isMatch = first.pairId === second.pairId;
 
-        // animación local solo para el jugador activo
         this.time.delayedCall(700, () => {
           if (isMatch) {
             first.matched = true;
@@ -332,8 +485,6 @@ export function createMemotestScene(
 
       this.socket.emit(WsEvents.GameMoveIn, payload);
     }
-
-    // ---------- lifecycle ----------
 
     shutdown(): void {
       this.socket?.removeAllListeners();
