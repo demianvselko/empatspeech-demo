@@ -1,24 +1,31 @@
+// apps/frontend/src/game/phaser/MemotestScene.ts
+"use client";
+
 import type * as PhaserNS from "phaser";
 import { io, type Socket } from "socket.io-client";
+
 import {
   WsEvents,
   type GameState,
   type SessionJoinIn,
   type GameMoveIn,
 } from "@shared/types";
+
 import {
   type Difficulty,
   difficultyPresets,
   shuffleDeterministic,
   type CardOnBoard,
 } from "./types";
-import { ANIMALS_DECK_ES } from "@/shared/cards/animalsDeck";
+
 import type { GameCard } from "@/shared/cards/types";
+import { getDeckByLabel } from "@/shared/cards/decks";
 
 type SceneDeps = {
   sessionId: string;
   userId: string;
   difficulty?: Difficulty;
+  seedLabel?: string;
 };
 
 type Role = "slp" | "student" | "unknown";
@@ -27,7 +34,10 @@ export function createMemotestScene(
   Phaser: typeof import("phaser"),
   deps: SceneDeps,
 ) {
-  const { sessionId, userId, difficulty = "easy" } = deps;
+  const { sessionId, userId, difficulty = "easy", seedLabel } = deps;
+
+  const deck: GameCard[] = getDeckByLabel(seedLabel);
+  const boardSeed = sessionId;
 
   return class MemotestScene extends Phaser.Scene {
     private socket!: Socket;
@@ -56,25 +66,33 @@ export function createMemotestScene(
       super("MemotestScene");
     }
 
-    create(): void {
-      this.createHud();
-      this.setupSocket();
-    }
-
-    update(): void {}
-
+    // ------------------------------------------------------------
+    // Lifecycle
+    // ------------------------------------------------------------
     preload(): void {
-      const imageCards = ANIMALS_DECK_ES.filter(
-        (c) => c.type === "image" && c.imageUrl,
-      );
-
-      for (const card of imageCards) {
+      const imgs = deck.filter((c) => c.type === "image" && c.imageUrl);
+      for (const card of imgs) {
         this.load.image(card.pairKey, card.imageUrl);
       }
     }
 
+    create(): void {
+      // Fondo claro, alineado al card de la UI
+      this.cameras.main.setBackgroundColor(0xf9fafb);
+
+      this.createHud();
+      this.setupSocket();
+    }
+
+    update(): void {
+      // no-op por ahora
+    }
+
+    // ------------------------------------------------------------
+    // WebSocket
+    // ------------------------------------------------------------
     private setupSocket(): void {
-      this.socket = io("ws://localhost:4000/ws", {
+      this.socket = io(process.env.NEXT_PUBLIC_WS_URL, {
         transports: ["websocket"],
       });
 
@@ -92,20 +110,24 @@ export function createMemotestScene(
           typeof err === "object" && err !== null && "message" in err
             ? (err as { message: string }).message
             : JSON.stringify(err);
+
         this.infoText?.setText(`Error: ${msg}`);
       });
 
       this.socket.on("disconnect", () => {
-        this.infoText?.setText("Desconectado del servidor");
+        this.infoText?.setText("Disconnected from server");
       });
     }
 
+    // ------------------------------------------------------------
+    // Game state sync
+    // ------------------------------------------------------------
     private handleGameState(state: GameState): void {
       this.gameState = state;
       this.updateHud(state);
 
       if (this.cards.length === 0) {
-        this.buildBoard(state.sessionId, difficulty);
+        this.buildBoard(difficulty);
       }
 
       this.applyMatchedFromState(state);
@@ -119,71 +141,59 @@ export function createMemotestScene(
     }
 
     private isMyTurn(state: GameState): boolean {
-      const role = this.getMyRole(state);
-      return role !== "unknown" && state.currentTurn === role;
+      return state.currentTurn === this.getMyRole(state);
     }
 
-    private inferWinnerRole(state: GameState): Role {
-      if (!state.matchedCardIds || state.matchedCardIds.length === 0) {
-        return "unknown";
-      }
-      return state.currentTurn as Role;
-    }
-
+    // ------------------------------------------------------------
+    // HUD
+    // ------------------------------------------------------------
     private createHud(): void {
+      const textStyle: PhaserNS.Types.GameObjects.Text.TextStyle = {
+        fontFamily:
+          "system-ui, -apple-system, BlinkMacSystemFont, 'Baloo 2', 'Comic Neue', sans-serif",
+        fontSize: "16px",
+        color: "#0f172a",
+      };
+
       this.infoText = this.add
-        .text(16, 16, "Conectando...", {
-          fontFamily: "sans-serif",
-          fontSize: "16px",
-          color: "#e5e7eb",
-        })
+        .text(16, 16, "Connecting...", textStyle)
         .setDepth(10);
 
-      this.turnText = this.add
-        .text(16, 40, "Turno: -", {
-          fontFamily: "sans-serif",
-          fontSize: "16px",
-          color: "#e5e7eb",
-        })
-        .setDepth(10);
+      this.turnText = this.add.text(16, 40, "Turn: -", textStyle).setDepth(10);
 
       this.accuracyText = this.add
-        .text(16, 64, "Trials: 0 | Accuracy: 0%", {
-          fontFamily: "sans-serif",
-          fontSize: "16px",
-          color: "#e5e7eb",
-        })
+        .text(16, 64, "Trials: 0 | Accuracy: 0%", textStyle)
         .setDepth(10);
     }
 
     private updateHud(state: GameState): void {
-      const isMyTurn = this.isMyTurn(state);
-
-      let turnLabel = "-";
-      if (state.currentTurn === "slp") turnLabel = "SLP";
-      if (state.currentTurn === "student") turnLabel = "Student";
+      const myTurn = this.isMyTurn(state);
 
       this.infoText?.setText(
         `Session: ${state.sessionId.slice(0, 8)}… | ${
-          isMyTurn ? "Tu turno" : "Turno del otro"
+          myTurn ? "Your turn" : "Other player's turn"
         }`,
       );
-      this.turnText?.setText(`Turno: ${turnLabel}`);
+
+      this.turnText?.setText(`Turn: ${state.currentTurn}`);
       this.accuracyText?.setText(
         `Trials: ${state.totalTrials} | Accuracy: ${state.accuracyPercent}%`,
       );
     }
 
-    private buildBoard(sessionIdSeed: string, diff: Difficulty): void {
+    // ------------------------------------------------------------
+    // Build board (difficulty + deterministic)
+    // ------------------------------------------------------------
+    private buildBoard(diff: Difficulty): void {
       const cfg = difficultyPresets[diff];
 
       const pairsMap = new Map<string, { image?: GameCard; word?: GameCard }>();
 
-      for (const card of ANIMALS_DECK_ES) {
-        const current = pairsMap.get(card.pairKey) ?? {};
-        if (card.type === "image") current.image = card;
-        if (card.type === "word") current.word = card;
-        pairsMap.set(card.pairKey, current);
+      for (const card of deck) {
+        const entry = pairsMap.get(card.pairKey) ?? {};
+        if (card.type === "image") entry.image = card;
+        if (card.type === "word") entry.word = card;
+        pairsMap.set(card.pairKey, entry);
       }
 
       let pairs = Array.from(pairsMap.entries())
@@ -194,10 +204,9 @@ export function createMemotestScene(
           wordCard: v.word as GameCard,
         }));
 
-      pairs = shuffleDeterministic(pairs, sessionIdSeed).slice(
-        0,
-        cfg.pairCount,
-      );
+      // Número de pares según difficultyPresets
+      pairs = shuffleDeterministic(pairs, boardSeed).slice(0, cfg.pairCount);
+
       this.totalPairs = pairs.length;
 
       const tempCards: CardOnBoard[] = [];
@@ -217,7 +226,7 @@ export function createMemotestScene(
           {
             id: `${pair.pairId}-txt`,
             pairId: pair.pairId,
-            kind: "text",
+            kind: "text", // <-- CardKind nuevo
             x: 0,
             y: 0,
             faceUp: true,
@@ -227,11 +236,11 @@ export function createMemotestScene(
         );
       }
 
-      const shuffled = shuffleDeterministic(tempCards, sessionIdSeed);
+      const shuffled = shuffleDeterministic(tempCards, boardSeed);
 
       const { width, height } = this.scale;
-      const cardW = 110;
-      const cardH = 130;
+      const cardW = 120;
+      const cardH = 140;
       const totalCols = cfg.cols;
       const totalRows = Math.ceil(shuffled.length / totalCols);
 
@@ -253,45 +262,52 @@ export function createMemotestScene(
 
       this.renderCards();
 
+      // Fase de “memorización”: 5s boca arriba
       this.time.delayedCall(5000, () => {
         for (const card of this.cards) {
-          if (!card.matched) {
-            card.faceUp = false;
-          }
+          if (!card.matched) card.faceUp = false;
         }
         this.updateCardSprites();
       });
     }
 
+    // ------------------------------------------------------------
+    // Render / update cards
+    // ------------------------------------------------------------
     private renderCards(): void {
       for (const card of this.cards) {
         const container = this.add.container(card.x, card.y);
 
-        const rect = this.add.rectangle(0, 0, 100, 120, 0x1f2937, 1);
-        rect.setStrokeStyle(3, 0x38bdf8);
+        // Marco de la tarjeta (fondo pastel + borde suave)
+        const rect = this.add.rectangle(0, 0, 120, 140, 0xfdfcfb);
+        rect.setStrokeStyle(3, 0x93c5fd);
 
         let face: PhaserNS.GameObjects.Text | PhaserNS.GameObjects.Image;
 
         if (card.kind === "image") {
-          const img = this.add.image(0, 0, card.textureKey ?? "");
-          img.setDisplaySize(80, 80);
+          const img = this.add.image(0, -6, card.textureKey ?? "");
+          img.setDisplaySize(86, 86);
           face = img;
         } else {
           const text = this.add.text(0, 0, card.text ?? "", {
-            fontFamily: "sans-serif",
-            fontSize: "22px",
-            color: "#f9fafb",
+            fontFamily:
+              "system-ui, -apple-system, BlinkMacSystemFont, 'Comic Neue', 'Baloo 2', sans-serif",
+            fontSize: "26px",
+            color: "#1f2933",
             align: "center",
           });
+
           text.setOrigin(0.5);
+          text.setStroke("#f97316", 2); // borde naranja suave
+          text.setShadow(1, 2, "#e5e7eb", 2, false, true);
           face = text;
         }
 
         const back = this.add.text(0, 0, "?", {
-          fontFamily: "sans-serif",
-          fontSize: "22px",
-          color: "#f9fafb",
-          align: "center",
+          fontFamily:
+            "system-ui, -apple-system, BlinkMacSystemFont, 'Comic Neue', 'Baloo 2', sans-serif",
+          fontSize: "30px",
+          color: "#2563eb",
         });
         back.setOrigin(0.5);
 
@@ -302,7 +318,7 @@ export function createMemotestScene(
         container.add(face);
         container.add(back);
 
-        container.setSize(100, 120);
+        container.setSize(120, 140);
         container.setInteractive({ useHandCursor: true });
         container.on("pointerdown", () => this.handleCardClick(card.id));
 
@@ -327,22 +343,31 @@ export function createMemotestScene(
         }
 
         if (card.kind === "image") {
-          const img = face as PhaserNS.GameObjects.Image;
-          img.setVisible(card.faceUp);
+          (face as PhaserNS.GameObjects.Image).setVisible(card.faceUp);
           back.setVisible(!card.faceUp);
         } else {
-          const faceText = face as PhaserNS.GameObjects.Text;
-          faceText.setText(card.text ?? "");
-          faceText.setVisible(card.faceUp);
+          const t = face as PhaserNS.GameObjects.Text;
+          t.setText(card.text ?? "");
+          t.setVisible(card.faceUp);
           back.setVisible(!card.faceUp);
         }
 
-        rect.setFillStyle(card.faceUp ? 0x1e293b : 0x020617, 1);
+        if (card.faceUp) {
+          rect.setFillStyle(0xfefce8, 1); // amarillo claro
+          rect.setStrokeStyle(3, 0xfacc15);
+        } else {
+          rect.setFillStyle(0xf9fafb, 1); // casi blanco
+          rect.setStrokeStyle(3, 0x93c5fd);
+        }
       }
     }
 
+    // ------------------------------------------------------------
+    // Match state sync + end game
+    // ------------------------------------------------------------
     private applyMatchedFromState(state: GameState): void {
       if (!state.matchedCardIds) return;
+
       const set = new Set(state.matchedCardIds);
 
       for (const card of this.cards) {
@@ -357,12 +382,9 @@ export function createMemotestScene(
 
     private checkGameFinished(state: GameState): void {
       if (this.finished) return;
-      if (!this.totalPairs) return;
 
-      const matchedCardsCount = state.matchedCardIds?.length ?? 0;
-      const matchedPairs = matchedCardsCount / 2;
-
-      if (matchedPairs >= this.totalPairs) {
+      const matched = (state.matchedCardIds?.length ?? 0) / 2;
+      if (matched >= this.totalPairs) {
         this.finished = true;
         this.showGameOverOverlay(state);
       }
@@ -372,41 +394,41 @@ export function createMemotestScene(
       const { width, height } = this.scale;
 
       const myRole = this.getMyRole(state);
-      const winnerRole = this.inferWinnerRole(state);
+      const winnerRole = state.currentTurn as Role;
 
-      let title = "Juego terminado";
+      let title = "Game Over";
+
       if (myRole !== "unknown") {
-        if (winnerRole === "unknown") {
-          title = "Juego terminado";
-        } else if (myRole === winnerRole) {
-          title = "¡Ganaste! 🎉";
-        } else {
-          title = "Perdiste 😢";
-        }
+        if (winnerRole === "unknown") title = "Game Over";
+        else if (winnerRole === myRole) title = "You win! 🎉";
+        else title = "You lost 😢";
       }
 
       this.gameOverOverlay = this.add
-        .rectangle(width / 2, height / 2, width, height, 0x020617, 0.85)
+        .rectangle(width / 2, height / 2, width, height, 0x020617, 0.4)
         .setDepth(20)
         .setAlpha(0);
 
       this.gameOverTitle = this.add
         .text(width / 2, height / 2 - 40, title, {
-          fontFamily: "sans-serif",
+          fontFamily:
+            "system-ui, -apple-system, BlinkMacSystemFont, 'Baloo 2', sans-serif",
           fontSize: "40px",
-          color: "#f9fafb",
+          color: "#0f172a",
         })
         .setOrigin(0.5)
         .setDepth(21)
         .setAlpha(0)
         .setScale(0.8);
 
-      const statsText = `Trials: ${state.totalTrials}\nAccuracy: ${state.accuracyPercent}%`;
+      const stats = `Trials: ${state.totalTrials}\nAccuracy: ${state.accuracyPercent}%`;
+
       this.gameOverStats = this.add
-        .text(width / 2, height / 2 + 20, statsText, {
-          fontFamily: "sans-serif",
+        .text(width / 2, height / 2 + 20, stats, {
+          fontFamily:
+            "system-ui, -apple-system, BlinkMacSystemFont, 'Baloo 2', sans-serif",
           fontSize: "22px",
-          color: "#e5e7eb",
+          color: "#1f2933",
           align: "center",
         })
         .setOrigin(0.5)
@@ -438,6 +460,9 @@ export function createMemotestScene(
       });
     }
 
+    // ------------------------------------------------------------
+    // Click handler
+    // ------------------------------------------------------------
     private handleCardClick(cardId: string): void {
       if (this.finished) return;
       if (!this.gameState) return;
@@ -453,6 +478,7 @@ export function createMemotestScene(
 
       if (this.openCards.length === 2) {
         this.inputLocked = true;
+
         const [first, second] = this.openCards;
         const isMatch = first.pairId === second.pairId;
 
@@ -473,6 +499,9 @@ export function createMemotestScene(
       }
     }
 
+    // ------------------------------------------------------------
+    // Emit move to server
+    // ------------------------------------------------------------
     private sendMove(correct: boolean, cards: [string, string]): void {
       if (!this.gameState) return;
 
@@ -486,6 +515,9 @@ export function createMemotestScene(
       this.socket.emit(WsEvents.GameMoveIn, payload);
     }
 
+    // ------------------------------------------------------------
+    // Cleanup
+    // ------------------------------------------------------------
     shutdown(): void {
       this.socket?.removeAllListeners();
       this.socket?.disconnect();
@@ -493,7 +525,7 @@ export function createMemotestScene(
 
     destroy(): void {
       this.shutdown();
-      // @ts-expect-error firma de destroy en Phaser
+      // @ts-expect-error firma de destroy
       super.destroy(true);
     }
   };

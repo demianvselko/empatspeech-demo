@@ -28,6 +28,7 @@ export type SessionWsClient = {
 
 export function createSessionWsClient(baseHttpUrl: string): SessionWsClient {
   const url = baseHttpUrl.replace(/^http/, "ws");
+  console.log("🚀 ~ createSessionWsClient ~ url:", url);
   const socket: Socket = io(`${url}/ws`, {
     transports: ["websocket"],
   });

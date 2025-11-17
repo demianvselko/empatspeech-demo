@@ -27,7 +27,6 @@ export function saveAuth(accessToken: string, user: AuthUser): void {
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 
-  // Compatibilidad con código viejo
   localStorage.setItem("token", accessToken);
   localStorage.setItem("email", user.email);
   localStorage.setItem("role", user.role);

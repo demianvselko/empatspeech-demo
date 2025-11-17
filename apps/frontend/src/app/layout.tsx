@@ -5,7 +5,7 @@ import { AuthProvider } from "@/context/auth-context";
 export const metadata: Metadata = {
   title: "Speech Therapy Memotest",
   description:
-    "Plataform for therapists and patients to practice speech therapy exercises.",
+    "Platform for therapists and children to practice speech therapy exercises.",
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="bg-slate-900 text-slate-50">
+      <body className="min-h-screen antialiased">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

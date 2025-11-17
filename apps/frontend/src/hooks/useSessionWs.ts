@@ -1,4 +1,3 @@
-// apps/frontend/src/hooks/useSessionWs.ts
 "use client";
 
 import { useEffect, useRef, useState } from "react";

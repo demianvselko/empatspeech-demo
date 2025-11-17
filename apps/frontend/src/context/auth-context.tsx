@@ -49,12 +49,14 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     };
   });
 
+  // Ya hidratamos desde loadAuth en el initializer,
+  // así que no necesitamos un flag separado.
   const isLoading = false;
 
   const login = useCallback(async (input: LoginInput) => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
-    const res = await fetch(`${baseUrl}/api/v1/auth/login`, {
+    const res = await fetch(`${baseUrl}/v1/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

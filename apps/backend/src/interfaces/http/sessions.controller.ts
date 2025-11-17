@@ -61,7 +61,7 @@ export class SessionsController {
     @Req() req: AuthedRequest,
     @Body() body: CreateSessionBody,
   ): Promise<CreateSessionOutput> {
-    const { sub, email: teacherEmail } = req.user;
+    const { sub } = req.user;
 
     const slpId = sub;
 
