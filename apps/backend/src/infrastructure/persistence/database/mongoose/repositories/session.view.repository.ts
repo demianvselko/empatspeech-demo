@@ -4,6 +4,7 @@ import { Result } from '@domain/shared/result/result';
 import { BaseError } from '@domain/shared/error/base.error';
 import { Session } from '@domain/entities/session/session.entity';
 import { SessionFactory } from '@domain/entities/session/session.factory';
+import { SessionDifficulty } from '@domain/entities/session/session.props';
 import { mapMongoError } from '../utils/map-mongo-error';
 
 export interface SessionDocument {
@@ -13,6 +14,7 @@ export interface SessionDocument {
   slpId: string;
   studentId: string;
   seed: number;
+  difficulty: SessionDifficulty;
   finishedAt: Date;
   notes: string;
   trials: Array<{ correct: boolean; tsEpochMs: number }>;
@@ -41,6 +43,7 @@ export class MongooseSessionViewRepository {
             slpId: doc.slpId,
             studentId: doc.studentId,
             seed: doc.seed,
+            difficulty: doc.difficulty,
             finishedAt: doc.finishedAt ?? undefined,
             notes: doc.notes ?? undefined,
             trials: doc.trials ?? [],

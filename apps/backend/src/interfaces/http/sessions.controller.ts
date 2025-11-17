@@ -36,6 +36,7 @@ import { RolesGuard } from '@infrastructure/auth/roles.guard';
 import { Roles } from '@infrastructure/auth/roles.decorator';
 import type { JwtPayload } from '@infrastructure/auth/jwt.types';
 import { emailToUserId } from '@infrastructure/auth/email-user-id.util';
+import { SessionDifficulty } from '@domain/entities/session/session.props';
 
 type AuthedRequest = FastifyRequest & { user: JwtPayload };
 
@@ -43,6 +44,7 @@ type CreateSessionBody = {
   studentEmail: string;
   notes?: string;
   seed?: number;
+  difficulty?: SessionDifficulty;
 };
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -64,7 +66,6 @@ export class SessionsController {
     const { sub } = req.user;
 
     const slpId = sub;
-
     const studentId = emailToUserId(body.studentEmail);
 
     const input: CreateSessionInput = {
@@ -72,6 +73,7 @@ export class SessionsController {
       studentId,
       notes: body.notes,
       seed: body.seed,
+      difficulty: body.difficulty,
     };
 
     const result = await this.createSession.execute(input);
