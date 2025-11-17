@@ -15,8 +15,8 @@ async function bootstrap(): Promise<void> {
 
   await app.listen({ host, port });
 
-  console.log(`🚀 Server running on http://${host}:${port}/api`);
-  console.log(`📘 Swagger UI: http://${host}:${port}/api/docs`);
+  console.log(`🚀 Server running on http://${host}:${port}`);
+  console.log(`📘 Swagger UI: http://${host}:${port}/docs`);
 }
 
 void bootstrap();

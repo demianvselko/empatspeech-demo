@@ -20,9 +20,9 @@ export type BoardConfig = {
 };
 
 export const difficultyPresets: Record<Difficulty, BoardConfig> = {
-  easy: { cols: 4, pairCount: 4 },
-  medium: { cols: 4, pairCount: 6 },
-  hard: { cols: 5, pairCount: 8 },
+  easy: { cols: 4, pairCount: 6 },
+  medium: { cols: 4, pairCount: 8 },
+  hard: { cols: 5, pairCount: 10 },
 };
 
 function hashStringToSeed(str: string): number {
