@@ -6,16 +6,16 @@ for up the project, you need start a dockerfile in backend for the database.
 npm run db:up
 ```
 
-Up the backend in  watch mode(in the backend folder):
+Up the backend in watch mode(in the backend folder):
 
 ```bash
-npm run start:dev 
+npm run start:dev
 ```
 
-Up the frontend in  watch mode(in the frontend folder):
+Up the frontend in watch mode(in the frontend folder):
 
 ```bash
-npm run start:dev 
+npm run start:dev
 ```
 
 EXAMPLE IF YOU NEED INSTALL A NEW DEPENDENCY

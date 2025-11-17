@@ -61,7 +61,7 @@ export class SessionsController {
     private readonly patchNotes: PatchNotesUC,
     private readonly getSessionSummary: GetSessionSummaryUC,
     private readonly sessionGateway: SessionGateway,
-  ) { }
+  ) {}
 
   @Post()
   @Roles('Teacher')
