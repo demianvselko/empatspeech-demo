@@ -19,7 +19,7 @@ export interface SessionDocument {
   seed: number;
   difficulty: SessionDifficulty;
   finishedAt?: Date | null;
-  notes?: string | null;
+  notes?: string[] | null;
   trials: Array<{ correct: boolean; tsEpochMs: number }>;
 }
 
@@ -43,7 +43,7 @@ export class MongooseSessionRepository implements SessionRepositoryPort {
         seed: doc.seed,
         difficulty: doc.difficulty,
         finishedAt: doc.finishedAt ?? undefined,
-        notes: doc.notes ?? undefined,
+        notes: doc.notes ?? [],
         trials: doc.trials ?? [],
       });
 
@@ -68,8 +68,7 @@ export class MongooseSessionRepository implements SessionRepositoryPort {
             slpId: p.slpId,
             studentId: p.studentId,
             seed: p.seed,
-            difficulty: p.difficulty,
-            notes: p.notes ?? null,
+            notes: p.notes,
             finishedAt: p.finishedAtEpochMs
               ? new Date(p.finishedAtEpochMs)
               : null,

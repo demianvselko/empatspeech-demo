@@ -296,7 +296,6 @@ export class SessionGateway
       createdAtIso: p.createdAtIso,
       finishedAtIso: p.finishedAtIso,
       matchedCardIds: matchedSet ? [...matchedSet] : [],
-
       boardSeed: p.seed.toString(),
       difficulty: p.difficulty,
     };

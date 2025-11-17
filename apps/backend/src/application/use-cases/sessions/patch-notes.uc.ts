@@ -19,6 +19,7 @@ export class PatchNotesUC
 
     const found = await this.sessions.findById(idRes.getValue());
     if (found.isFailure()) return Result.fail(found.getErrors());
+
     const session = found.getValue();
     if (!session) {
       return Result.fail(
@@ -26,27 +27,41 @@ export class PatchNotesUC
       );
     }
 
-    let notes: string | undefined;
-    if (typeof input.notes === 'string') {
-      const trimmed = input.notes.trim();
-      if (trimmed.length === 0) {
-        notes = undefined;
-      } else {
-        const nv = StringVO.from(trimmed, {
-          fieldName: 'notes',
-          minLength: 1,
-          maxLength: 2000,
-          trim: false,
-        });
-        if (nv.isFailure()) return Result.fail(nv.getErrors());
-        notes = nv.getValue().valueAsString;
-      }
+    if (typeof input.notes !== 'string') {
+      // Nada que agregar, devolvemos el estado actual
+      return Result.ok({
+        sessionId: session.sessionId.valueAsString,
+        notes: [...session.notes],
+      });
     }
 
-    const next = session.withNotes(notes);
+    const trimmed = input.notes.trim();
+    if (trimmed.length === 0) {
+      // Nota vacía: no modificamos la sesión
+      return Result.ok({
+        sessionId: session.sessionId.valueAsString,
+        notes: [...session.notes],
+      });
+    }
+
+    const nv = StringVO.from(trimmed, {
+      fieldName: 'notes',
+      minLength: 1,
+      maxLength: 2000,
+      trim: false,
+    });
+    if (nv.isFailure()) return Result.fail(nv.getErrors());
+
+    const finalNote = nv.getValue().valueAsString;
+
+    // 🔹 Nuevo comportamiento: agregamos nota a la lista
+    const next = session.addNote(finalNote);
     const saved = await this.sessions.save(next);
     if (saved.isFailure()) return Result.fail(saved.getErrors());
 
-    return Result.ok({ sessionId: next.sessionId.valueAsString, notes });
+    return Result.ok({
+      sessionId: next.sessionId.valueAsString,
+      notes: [...next.notes],
+    });
   }
 }

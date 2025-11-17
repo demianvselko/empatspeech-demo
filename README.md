@@ -11,18 +11,22 @@ pnpm --filter @app/frontend dev
 Modify any type in root:
 pnpm -C packages/shared build
 
-Rutas/
+Paths/
 
-Health
+### Con el servidor corriendo
 
-```
+## Check service status
+
+# Health
+
+```bash
 curl http://localhost:4000/v1/health
 ```
 
 HealthOutput:
 {"ok":true,"timestamp":"2025-11-15T21:04:46.523Z"}
 
-```
+```bash
 curl -X POST http://localhost:4000/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
@@ -39,7 +43,7 @@ TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
 Create Session:
 
-```
+```bash
 curl -X POST http://localhost:4000/v1/sessions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
@@ -65,7 +69,7 @@ SESSION_ID=68b36ec5-e4e0-44e4-a765-59df2f64d417
 
 Add Correct Trial:
 
-```
+```bash
 curl -X POST http://localhost:4000/v1/sessions/$SESSION_ID/trials \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
@@ -84,7 +88,7 @@ AddCorrectTrialOutput:
 
 Add incorrect Trial:
 
-```
+```bash
 curl -X POST http://localhost:4000/v1/sessions/$SESSION_ID/trials   -H "Content-Type: application/json"   -H "Authorization: Bearer $TOKEN"   -d '{
     "correct": false
   }'
@@ -95,20 +99,21 @@ AddIncorrectTrialOutput:
 
 AddNotes:
 
-```
+```bash
 curl -X PATCH http://localhost:4000/v1/sessions/$SESSION_ID/notes \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "notes": "New Note"
   }'
-
+```
 
 AddNoteOutput:
 {"sessionId":"68b36ec5-e4e0-44e4-a765-59df2f64d417","notes":"New Note"}
 
 EndSession:
-```
+
+```bash
 
 curl -X POST <http://localhost:4000/v1/sessions/$SESSION_ID/finish> \
  -H "Authorization: Bearer $TOKEN"
@@ -117,4 +122,3 @@ curl -X POST <http://localhost:4000/v1/sessions/$SESSION_ID/finish> \
 
 EndSessionOutput:
 {"sessionId":"68b36ec5-e4e0-44e4-a765-59df2f64d417","finishedAtIso":"2025-11-15T21:04:01.065Z"}
-```

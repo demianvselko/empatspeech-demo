@@ -5,7 +5,7 @@ export type SessionView = Readonly<{
   slpId: string;
   studentId: string;
   seed: number;
-  notes?: string;
+  notes?: string[];
   accuracyPercent: number;
   totalTrials: number;
   createdAtIso: string;

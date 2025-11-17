@@ -1,6 +1,6 @@
 import { BaseEntity } from '@domain/base/base.entity';
 import { SessionProps, Trial, SessionDifficulty } from './session.props';
-import { CreatedAtVO, UuidVO, StringVO } from '@domain/shared/valid-objects';
+import { CreatedAtVO, UuidVO } from '@domain/shared/valid-objects';
 import { FinishedAtVO } from './validate-objects/finished-at.vo';
 
 export class Session extends BaseEntity {
@@ -36,7 +36,7 @@ export class Session extends BaseEntity {
     return this.props.finishedAt;
   }
 
-  get notes(): StringVO | undefined {
+  get notes(): readonly string[] {
     return this.props.notes;
   }
 
@@ -61,25 +61,17 @@ export class Session extends BaseEntity {
     return new Session(updated);
   }
 
-  withNotes(rawNotes: string | undefined): Session {
-    if (rawNotes === undefined) {
-      return new Session({ ...this.props, notes: undefined });
+  addNote(rawNote: string): Session {
+    const trimmed = (rawNote ?? '').trim();
+    if (!trimmed) {
+      return this;
     }
-    const normalized = rawNotes ?? '';
-    const r = StringVO.from(normalized, {
-      fieldName: 'notes',
-      minLength: 0,
-      maxLength: 2_000,
-      trim: true,
-    });
-    if (r.isFailure()) {
-      throw r.getErrors();
-    }
-    const vo = r.getValue();
+
     const updated: SessionProps = {
       ...this.props,
-      notes: vo.valueAsString.length ? vo : undefined,
+      notes: [...this.props.notes, trimmed],
     };
+
     return new Session(updated);
   }
 
@@ -97,7 +89,7 @@ export class Session extends BaseEntity {
     studentId: string;
     seed: number;
     difficulty: SessionDifficulty;
-    notes?: string;
+    notes: string[];
     finishedAtIso?: string;
     finishedAtEpochMs?: number;
     trials: Trial[];
@@ -112,7 +104,7 @@ export class Session extends BaseEntity {
       studentId: this.studentId.valueAsString,
       seed: this.seed,
       difficulty: this.difficulty,
-      notes: this.notes?.valueAsString,
+      notes: [...this.notes],
       finishedAtIso: this.finishedAt?.valueAsIsoString,
       finishedAtEpochMs: this.finishedAt?.valueAsEpochMs,
       trials: [...this.trials],
