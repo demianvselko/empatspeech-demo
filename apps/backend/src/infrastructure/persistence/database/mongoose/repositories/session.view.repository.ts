@@ -16,7 +16,7 @@ export interface SessionDocument {
   seed: number;
   difficulty: SessionDifficulty;
   finishedAt: Date;
-  notes: string;
+  notes: string[];
   trials: Array<{ correct: boolean; tsEpochMs: number }>;
 }
 

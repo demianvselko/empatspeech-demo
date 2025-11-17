@@ -81,15 +81,18 @@ export const GameStateSchema = z.object({
     currentTurn: z.enum(["slp", "student"]),
     totalTrials: z.number().int().nonnegative(),
     accuracyPercent: z.number().int().min(0).max(100),
-    notes: z.string().optional(),
+
+    // 🔹 Ahora es una lista de notas, no un string.
+    notes: z.array(z.string()).default([]),
+
     createdAtIso: z.string(),
     finishedAtIso: z.string().optional(),
     matchedCardIds: z.array(z.string()).default([]),
 
-    // 🔥 Nuevo: seed del tablero, viene de Session.seed
+    // Seed del tablero, viene de Session.seed
     boardSeed: z.string(),
 
-    // 🔥 Nuevo: dificultad elegida por el Teacher
+    // Dificultad elegida por el Teacher
     difficulty: Difficulty,
 });
 export type GameState = z.infer<typeof GameStateSchema>;
