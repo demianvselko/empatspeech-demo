@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Copy, Check, StickyNote } from "lucide-react";
 
@@ -30,7 +30,7 @@ export default function SessionPlayPage() {
   const params = useParams<{ sessionId: string }>();
   const searchParams = useSearchParams();
   const { user, isLoading, accessToken } = useAuth();
-
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [finishLoading, setFinishLoading] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
@@ -144,6 +144,8 @@ export default function SessionPlayPage() {
 
       const data: FinishSessionResponse = await res.json();
       setFinishedAtIso(data.finishedAtIso);
+
+      router.push(`/sessions/${sessionId}/summary`);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unexpected error";

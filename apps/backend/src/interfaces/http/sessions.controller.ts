@@ -6,6 +6,7 @@ import {
   Post,
   Req,
   UseGuards,
+  Get,
 } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 
@@ -37,6 +38,8 @@ import { Roles } from '@infrastructure/auth/roles.decorator';
 import type { JwtPayload } from '@infrastructure/auth/jwt.types';
 import { emailToUserId } from '@infrastructure/auth/email-user-id.util';
 import { SessionDifficulty } from '@domain/entities/session/session.props';
+import { GetSessionSummaryUC } from '@application/use-cases/sessions/get-session-summary.uc';
+import { GetSessionSummaryOutput } from '@application/use-cases/sessions/dtos/get-session-summary.dto';
 
 type AuthedRequest = FastifyRequest & { user: JwtPayload };
 
@@ -55,6 +58,7 @@ export class SessionsController {
     private readonly appendTrial: AppendTrialUC,
     private readonly finishSession: FinishSessionUC,
     private readonly patchNotes: PatchNotesUC,
+    private readonly getSessionSummary: GetSessionSummaryUC,
   ) {}
 
   @Post()
@@ -111,6 +115,19 @@ export class SessionsController {
       notes: body.notes,
     });
     return this.unwrap<PatchNotesOutput>(result);
+  }
+  @Get(':id/summary')
+  @Roles('Teacher')
+  async getSummary(
+    @Req() req: AuthedRequest,
+    @Param('id') id: string,
+  ): Promise<GetSessionSummaryOutput> {
+    const { sub } = req.user;
+    const result = await this.getSessionSummary.execute({
+      sessionId: id,
+      slpId: sub,
+    });
+    return this.unwrap<GetSessionSummaryOutput>(result);
   }
 
   private unwrap<T>(r: Result<T, BaseError>): T {
