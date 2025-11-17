@@ -12,7 +12,7 @@ import {
   Trial,
   SessionDifficulty,
 } from './session.props';
-import { UuidVO } from '@domain/shared/valid-objects';
+import { StringVO, UuidVO } from '@domain/shared/valid-objects';
 import { FinishedAtVO } from './validate-objects/finished-at.vo';
 
 export class SessionFactory {
@@ -28,19 +28,25 @@ export class SessionFactory {
 
     const slp = UuidVO.fromString(input.slpId);
     if (slp.isFailure()) return Result.fail(slp.getErrors());
-
     const stu = UuidVO.fromString(input.studentId);
     if (stu.isFailure()) return Result.fail(stu.getErrors());
 
-    const difficulty: SessionDifficulty = input.difficulty ?? 'easy';
-
-    const initialNotes: string[] = [];
-    if (typeof input.notes === 'string') {
-      const trimmed = input.notes.trim();
-      if (trimmed.length > 0) {
-        initialNotes.push(trimmed);
+    let notes: string[] = [];
+    if (input.notes !== undefined) {
+      const r = StringVO.from(input.notes, {
+        fieldName: 'notes',
+        minLength: 0,
+        maxLength: 2_000,
+        trim: true,
+      });
+      if (r.isFailure()) return Result.fail(r.getErrors());
+      const vo = r.getValue();
+      if (vo.valueAsString.length > 0) {
+        notes = [vo.valueAsString];
       }
     }
+
+    const difficulty: SessionDifficulty = input.difficulty ?? 'easy';
 
     const props: SessionProps = {
       ...base.getValue(),
@@ -48,7 +54,7 @@ export class SessionFactory {
       studentId: stu.getValue(),
       seed: input.seed ?? Math.floor(Math.random() * 1_000_000),
       difficulty,
-      notes: initialNotes,
+      notes,
       trials: [],
     };
 
@@ -65,12 +71,11 @@ export class SessionFactory {
 
     const slp = UuidVO.fromString(dto.slpId);
     if (slp.isFailure()) return Result.fail(slp.getErrors());
-
     const stu = UuidVO.fromString(dto.studentId);
     if (stu.isFailure()) return Result.fail(stu.getErrors());
 
     const notes: string[] = Array.isArray(dto.notes)
-      ? dto.notes.map((n) => `${n}`.trim()).filter((n) => n.length > 0)
+      ? dto.notes.map(String)
       : [];
 
     let finishedAtVO: FinishedAtVO | undefined;
@@ -84,6 +89,7 @@ export class SessionFactory {
       ? dto.trials.map((t) => ({
           correct: !!t.correct,
           tsEpochMs: Math.trunc(t.tsEpochMs),
+          performedBy: t.performedBy === 'student' ? 'student' : 'slp',
         }))
       : [];
 

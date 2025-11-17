@@ -36,11 +36,21 @@ export class GetSessionSummaryUC
       );
     }
 
-    const totalTrials = session.trials.length;
-    const correctTrials = session.trials.filter((t) => t.correct).length;
+    const allTrials = session.trials;
+
+    const studentTrials = allTrials.filter((t) => t.performedBy === 'student');
+
+    const totalTrials = studentTrials.length;
+    const correctTrials = studentTrials.filter((t) => t.correct).length;
     const incorrectTrials = totalTrials - correctTrials;
-    const accuracyPercent = session.accuracyPercent;
-    const errorPercent = 100 - accuracyPercent;
+
+    let accuracyPercent = 0;
+    let errorPercent = 0;
+
+    if (totalTrials > 0) {
+      accuracyPercent = Math.round((correctTrials / totalTrials) * 100);
+      errorPercent = 100 - accuracyPercent;
+    }
 
     return Result.ok({
       sessionId: session.sessionId.valueAsString,

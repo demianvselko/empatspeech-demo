@@ -45,17 +45,26 @@ export class Session extends BaseEntity {
   }
 
   get accuracyPercent(): number {
-    if (this.props.trials.length === 0) return 0;
-    const correct = this.props.trials.filter((t) => t.correct).length;
-    return Math.round((correct / this.props.trials.length) * 100);
+    const studentTrials = this.props.trials.filter(
+      (t) => t.performedBy === 'student',
+    );
+
+    if (studentTrials.length === 0) return 0;
+
+    const correct = studentTrials.filter((t) => t.correct).length;
+    return Math.round((correct / studentTrials.length) * 100);
   }
 
-  withTrial(correct: boolean, atEpochMs: number): Session {
+  withTrial(
+    correct: boolean,
+    atEpochMs: number,
+    performedBy: 'slp' | 'student',
+  ): Session {
     const updated: SessionProps = {
       ...this.props,
       trials: [
         ...this.props.trials,
-        { correct, tsEpochMs: Math.trunc(atEpochMs) },
+        { correct, tsEpochMs: Math.trunc(atEpochMs), performedBy },
       ],
     };
     return new Session(updated);

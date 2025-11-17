@@ -39,7 +39,7 @@ import type { JwtPayload } from '@infrastructure/auth/jwt.types';
 import { emailToUserId } from '@infrastructure/auth/email-user-id.util';
 import { SessionDifficulty } from '@domain/entities/session/session.props';
 import { GetSessionSummaryUC } from '@application/use-cases/sessions/get-session-summary.uc';
-import { GetSessionSummaryOutput } from '@application/use-cases/sessions/dtos/get-session-summary.dto';
+import type { GetSessionSummaryOutput } from '@application/use-cases/sessions/dtos/get-session-summary.dto';
 
 type AuthedRequest = FastifyRequest & { user: JwtPayload };
 
@@ -83,16 +83,20 @@ export class SessionsController {
     const result = await this.createSession.execute(input);
     return this.unwrap<CreateSessionOutput>(result);
   }
-
   @Post(':id/trials')
   @Roles('Teacher', 'Student')
   async addTrial(
+    @Req() req: AuthedRequest,
     @Param('id') id: string,
-    @Body() body: Omit<AppendTrialInput, 'sessionId'>,
+    @Body() body: Omit<AppendTrialInput, 'sessionId' | 'performedBy'>,
   ): Promise<AppendTrialOutput> {
+    const performedBy: 'slp' | 'student' =
+      req.user.role === 'Teacher' ? 'slp' : 'student';
+
     const result = await this.appendTrial.execute({
       sessionId: id,
       correct: body.correct,
+      performedBy,
     });
     return this.unwrap<AppendTrialOutput>(result);
   }
@@ -116,6 +120,7 @@ export class SessionsController {
     });
     return this.unwrap<PatchNotesOutput>(result);
   }
+
   @Get(':id/summary')
   @Roles('Teacher')
   async getSummary(

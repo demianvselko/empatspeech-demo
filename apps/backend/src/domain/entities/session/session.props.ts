@@ -2,7 +2,11 @@ import { BaseProps } from '@domain/base/base-props.type';
 import { UuidVO } from '@domain/shared/valid-objects';
 import { FinishedAtVO } from './validate-objects/finished-at.vo';
 
-export type Trial = Readonly<{ correct: boolean; tsEpochMs: number }>;
+export type Trial = Readonly<{
+  correct: boolean;
+  tsEpochMs: number;
+  performedBy: 'slp' | 'student';
+}>;
 
 export type SessionDifficulty = 'easy' | 'medium' | 'hard';
 
@@ -28,5 +32,9 @@ export type SessionPrimitives = Readonly<{
   difficulty?: SessionDifficulty;
   finishedAt?: Date | string | number;
   notes?: string[];
-  trials?: Array<{ correct: boolean; tsEpochMs: number }>;
+  trials?: Array<{
+    correct: boolean;
+    tsEpochMs: number;
+    performedBy?: 'slp' | 'student';
+  }>;
 }>;
