@@ -40,6 +40,7 @@ import { emailToUserId } from '@infrastructure/auth/email-user-id.util';
 import { SessionDifficulty } from '@domain/entities/session/session.props';
 import { GetSessionSummaryUC } from '@application/use-cases/sessions/get-session-summary.uc';
 import type { GetSessionSummaryOutput } from '@application/use-cases/sessions/dtos/get-session-summary.dto';
+import { SessionGateway } from '@interfaces/ws/session.gateway';
 
 type AuthedRequest = FastifyRequest & { user: JwtPayload };
 
@@ -59,7 +60,8 @@ export class SessionsController {
     private readonly finishSession: FinishSessionUC,
     private readonly patchNotes: PatchNotesUC,
     private readonly getSessionSummary: GetSessionSummaryUC,
-  ) {}
+    private readonly sessionGateway: SessionGateway,
+  ) { }
 
   @Post()
   @Roles('Teacher')
@@ -83,20 +85,17 @@ export class SessionsController {
     const result = await this.createSession.execute(input);
     return this.unwrap<CreateSessionOutput>(result);
   }
+
   @Post(':id/trials')
   @Roles('Teacher', 'Student')
   async addTrial(
-    @Req() req: AuthedRequest,
     @Param('id') id: string,
     @Body() body: Omit<AppendTrialInput, 'sessionId' | 'performedBy'>,
   ): Promise<AppendTrialOutput> {
-    const performedBy: 'slp' | 'student' =
-      req.user.role === 'Teacher' ? 'slp' : 'student';
-
     const result = await this.appendTrial.execute({
       sessionId: id,
       correct: body.correct,
-      performedBy,
+      performedBy: 'student',
     });
     return this.unwrap<AppendTrialOutput>(result);
   }
@@ -105,7 +104,10 @@ export class SessionsController {
   @Roles('Teacher')
   async finish(@Param('id') id: string): Promise<FinishSessionOutput> {
     const result = await this.finishSession.execute({ sessionId: id });
-    return this.unwrap<FinishSessionOutput>(result);
+    const output = this.unwrap<FinishSessionOutput>(result);
+    await this.sessionGateway.broadcastSessionState(id);
+
+    return output;
   }
 
   @Patch(':id/notes')
