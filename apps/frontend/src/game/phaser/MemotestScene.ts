@@ -87,7 +87,7 @@ export function createMemotestScene(
     }
 
     update(): void {
-      // no-op por ahora
+      // no-op
     }
 
     private setupSocket(): void {
@@ -115,16 +115,23 @@ export function createMemotestScene(
       });
 
       this.socket.on("disconnect", () => {
-        if (!this.sys?.isActive?.()) return;
-        if (!this.statusText) return;
-
-        this.statusText.setText("🔌 Disconnected — reconnecting…");
-        this.statusText.setColor("#64748b");
+        // Puede dispararse después de que la escena fue destruida,
+        // por eso usamos el optional chaining.
+        this.statusText?.setText("🔌 Disconnected — reconnecting…");
+        this.statusText?.setColor("#64748b");
       });
     }
 
     private handleGameState(state: GameState): void {
       this.gameState = state;
+
+      // 🔥 Si la sesión ya fue finalizada (teacher clickeó "Finish session"),
+      // redirigimos según el rol y no seguimos actualizando el board.
+      if (state.finishedAtIso) {
+        this.handleSessionFinished(state);
+        return;
+      }
+
       this.updateHud(state);
 
       if (this.cards.length === 0) {
@@ -133,12 +140,6 @@ export function createMemotestScene(
 
       this.applyMatchedFromState(state);
       this.checkGameFinished(state);
-    }
-
-    private getMyRole(state: GameState): Role {
-      if (state.slpId === userId) return "slp";
-      if (state.studentId === userId) return "student";
-      return "unknown";
     }
 
     private handleSessionFinished(state: GameState): void {
@@ -153,6 +154,12 @@ export function createMemotestScene(
       } else {
         window.location.href = "/";
       }
+    }
+
+    private getMyRole(state: GameState): Role {
+      if (state.slpId === userId) return "slp";
+      if (state.studentId === userId) return "student";
+      return "unknown";
     }
 
     private isMyTurn(state: GameState): boolean {
@@ -483,16 +490,6 @@ export function createMemotestScene(
         delay: 450,
       });
 
-      // 🔥 Después de mostrar el overlay, redirigir según el rol
-      this.time.delayedCall(3000, () => {
-        if (typeof window === "undefined") return;
-
-        if (myRole === "slp") {
-          window.location.href = `/sessions/${state.sessionId}/summary`;
-        } else if (myRole === "student") {
-          window.location.href = "/";
-        }
-      });
     }
 
     private handleCardClick(cardId: string): void {
