@@ -26,10 +26,16 @@ export class AppendTrialUC
     if (found.isFailure()) return Result.fail(found.getErrors());
 
     const session = found.getValue();
-    if (!session)
+    if (!session) {
       return Result.fail(new SessionNotFoundError(sessionId.valueAsString));
+    }
 
-    const next = session.withTrial(input.correct, this.clock.nowEpochMs());
+    const next = session.withTrial(
+      input.correct,
+      this.clock.nowEpochMs(),
+      input.performedBy,
+    );
+
     const saved = await this.sessions.save(next);
     if (saved.isFailure()) return Result.fail(saved.getErrors());
 
