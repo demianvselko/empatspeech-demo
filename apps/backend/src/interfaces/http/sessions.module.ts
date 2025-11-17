@@ -18,11 +18,14 @@ import { PatchNotesUC } from '@application/use-cases/sessions/patch-notes.uc';
 import { GetStudentProfileUC } from '@application/queries/get-student-profile.query';
 import { ListCaseloadUC } from '@application/queries/list-caseload.query';
 import { GetSessionSummaryUC } from '@application/use-cases/sessions/get-session-summary.uc';
+import { SessionGateway } from '@interfaces/ws/session.gateway';
 
 @Module({
   imports: [MongoPersistenceModule],
   controllers: [SessionsController, ProfilesController, CaseloadController],
   providers: [
+    SessionGateway,
+
     {
       provide: CreateSessionUC,
       useFactory: (sessions: SessionRepositoryPort) =>
@@ -69,4 +72,4 @@ import { GetSessionSummaryUC } from '@application/use-cases/sessions/get-session
   ],
   exports: [],
 })
-export class SessionsModule {}
+export class SessionsModule { }
