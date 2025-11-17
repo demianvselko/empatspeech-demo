@@ -7,7 +7,7 @@ export type SemanticField =
   | "food"
   | "objects"
   | "actions"
-  | "house"
+  | "countries"
   | "school";
 
 export type GameCard = {

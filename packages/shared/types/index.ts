@@ -15,7 +15,6 @@ export const StudentSchema = z.object({
     id: z.string(),
     slpId: z.string(),
     name: z.string().min(1),
-    birthdate: z.string().optional(),
     notes: z.string().optional(),
     metrics: z
         .object({

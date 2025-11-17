@@ -2,97 +2,107 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/auth-context";
-import type { AppRole } from "@/types/auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { loginSchema, type LoginFormValues } from "@/lib/validation/auth";
+import { useAuth } from "@/context/auth-context";
+import { PageShell } from "@/components/layouts/PageShell";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading, user } = useAuth();
+  const { login } = useAuth();
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<AppRole>("Teacher");
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting, isValid },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    mode: "onChange",
+    defaultValues: {
+      email: "",
+      role: "Teacher",
+    },
+  });
 
-  if (!isLoading && user) {
-    router.replace("/home");
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsSubmitting(true);
+  const onSubmit = async (values: LoginFormValues) => {
+    setFormError(null);
     try {
-      await login({ email, role });
-      router.push("/home");
-    } catch (err) {
-      console.error(err);
-      setError("No se pudo iniciar sesión");
-    } finally {
-      setIsSubmitting(false);
+      await login(values);
+
+      // Redirección según rol
+      const targetPath =
+        values.role === "Teacher" ? "/sessions/new" : "/sessions/join";
+
+      router.push(targetPath);
+    } catch {
+      setFormError("Login failed. Please check your email and role.");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Card className="w-full max-w-md bg-slate-900 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-xl text-slate-50">Init session</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email (ID)</Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-slate-800 border-slate-600"
-              />
-            </div>
+    <PageShell
+      title="Log in to your speech practice space"
+      subtitle="Therapists can create sessions, students can join with a shared link or ID."
+    >
+      <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
+        <div className="space-y-2">
+          <label htmlFor="email" className="text-sm font-medium text-slate-100">
+            Email
+          </label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            {...register("email")}
+          />
+          {errors.email && (
+            <p className="text-xs text-red-400">{errors.email.message}</p>
+          )}
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="role">Rol</Label>
-              <Select value={role} onValueChange={(v) => setRole(v as AppRole)}>
-                <SelectTrigger
-                  id="role"
-                  className="bg-slate-800 border-slate-600"
-                >
-                  <SelectValue placeholder="Select a rolel" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Teacher">Teacher (SLP)</SelectItem>
-                  <SelectItem value="Student">Student</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="space-y-2">
+          <label htmlFor="role" className="text-sm font-medium text-slate-100">
+            User type
+          </label>
+          <select
+            id="role"
+            {...register("role")}
+            className="block w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 shadow-sm outline-none ring-slate-500 placeholder:text-slate-500 focus:border-slate-400 focus:ring-1"
+          >
+            <option value="Teacher">Therapist</option>
+            <option value="Student">Student</option>
+          </select>
+          {errors.role && (
+            <p className="text-xs text-red-400">{errors.role.message}</p>
+          )}
+        </div>
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
+        {formError && (
+          <p className="text-sm text-red-400" role="alert">
+            {formError}
+          </p>
+        )}
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isSubmitting || isLoading}
-            >
-              {isSubmitting ? "Entering..." : "Enter"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+        <div className="flex items-center justify-between gap-3 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push("/")}
+          >
+            Back to home
+          </Button>
+
+          <Button type="submit" disabled={!isValid || isSubmitting}>
+            {isSubmitting ? "Signing in..." : "Log in"}
+          </Button>
+        </div>
+      </form>
+    </PageShell>
   );
 }

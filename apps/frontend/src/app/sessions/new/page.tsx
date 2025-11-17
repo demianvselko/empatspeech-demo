@@ -2,20 +2,35 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
 import { useAuth } from "@/context/auth-context";
+import {
+  newSessionSchema,
+  type NewSessionFormValues,
+} from "@/lib/validation/session";
+import { PageShell } from "@/components/layouts/PageShell";
+
+// ---------- Seed mapping ----------
+
+const SEED_LABEL_TO_ID = {
+  animals: 1,
+  countries: 2,
+} as const;
+
+type SeedLabel = keyof typeof SEED_LABEL_TO_ID;
+type SeedId = (typeof SEED_LABEL_TO_ID)[SeedLabel];
+
+const SEED_ID_TO_LABEL: Record<SeedId, SeedLabel> = Object.fromEntries(
+  Object.entries(SEED_LABEL_TO_ID).map(([label, id]) => [id, label]),
+) as Record<SeedId, SeedLabel>;
+
+// ---------- Types ----------
 
 type CreateSessionResponse = {
   sessionId: string;
@@ -27,14 +42,24 @@ export default function NewSessionPage() {
   const router = useRouter();
   const { user, accessToken, isLoading } = useAuth();
 
-  const [studentEmail, setStudentEmail] = useState("");
-  const [notes, setNotes] = useState("");
-  const [seed, setSeed] = useState("");
-  const [meetingUrl, setMeetingUrl] = useState("");
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [result, setResult] = useState<CreateSessionResponse | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting, isValid },
+    reset,
+  } = useForm<NewSessionFormValues>({
+    resolver: zodResolver(newSessionSchema),
+    mode: "onChange",
+    defaultValues: {
+      email: "",
+      seed: "",
+      difficulty: "easy", // 👈 default desde el front
+      notes: "",
+    },
+  });
 
   useEffect(() => {
     if (!isLoading && (!user || !accessToken)) {
@@ -42,9 +67,8 @@ export default function NewSessionPage() {
     }
   }, [isLoading, user, accessToken, router]);
 
-  async function handleCreateSession() {
-    setLoading(true);
-    setError(null);
+  const handleCreateSession = async (values: NewSessionFormValues) => {
+    setServerError(null);
     setResult(null);
 
     try {
@@ -58,13 +82,23 @@ export default function NewSessionPage() {
       const baseUrl =
         process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
+      const seedLabelRaw = values.seed?.trim();
+
+      const seedId =
+        seedLabelRaw && seedLabelRaw in SEED_LABEL_TO_ID
+          ? SEED_LABEL_TO_ID[seedLabelRaw as keyof typeof SEED_LABEL_TO_ID]
+          : undefined;
+
       const body = {
-        studentEmail: studentEmail.trim(),
-        notes: notes.trim() || undefined,
-        seed: seed ? Number(seed) : undefined,
+        studentEmail: values.email.trim(),
+        notes:
+          values.notes && values.notes.trim().length > 0
+            ? values.notes.trim()
+            : undefined,
+        seed: seedId,
       };
 
-      const res = await fetch(`${baseUrl}/api/v1/sessions`, {
+      const res = await fetch(`${baseUrl}/v1/sessions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -74,161 +108,214 @@ export default function NewSessionPage() {
       });
 
       if (!res.ok) {
+        console.error("create session error status:", res.status);
         const errBody = await res.json().catch(() => null);
         console.error("create session error body:", errBody);
         throw new Error("Failed to create the session");
       }
 
-      const data = (await res.json()) as CreateSessionResponse;
+      const data: CreateSessionResponse = await res.json();
       setResult(data);
 
-      const trimmedMeetingUrl = meetingUrl.trim();
-      const meetingQuery = trimmedMeetingUrl
-        ? `?meetingUrl=${encodeURIComponent(trimmedMeetingUrl)}`
-        : "";
+      const seedFromBackend =
+        data.seed === undefined ? "" : SEED_ID_TO_LABEL[data.seed as SeedId];
 
-      router.push(`/sessions/${data.sessionId}/play${meetingQuery}`);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
+      let labelForUrl = "";
+      if (seedFromBackend) {
+        labelForUrl = seedFromBackend;
+      } else if (seedLabelRaw && seedLabelRaw.length > 0) {
+        labelForUrl = seedLabelRaw as SeedLabel;
+      }
+
+      let query = "";
+
+      if (labelForUrl.length > 0) {
+        query += `${query ? "&" : "?"}seed=${encodeURIComponent(labelForUrl)}`;
+      }
+
+      const difficulty = values.difficulty ?? "easy";
+      if (difficulty) {
+        query += `${query ? "&" : "?"}difficulty=${encodeURIComponent(
+          difficulty,
+        )}`;
+      }
+
+      router.push(`/sessions/${data.sessionId}/play${query}`);
+
+      reset({
+        email: "",
+        seed: "",
+        difficulty: "easy",
+        notes: "",
+      });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Unexpected error";
+      setServerError(message);
     }
-  }
+  };
 
   if (isLoading || !user || !accessToken) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-900">
-        <p className="text-slate-200">Checking session...</p>
-      </main>
+      <PageShell
+        title="Checking your access…"
+        subtitle="Please wait a moment while we verify your account."
+      >
+        <p className="text-sm text-slate-700">Loading...</p>
+      </PageShell>
     );
   }
 
   if (user.role !== "Teacher") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-900">
-        <Card className="w-full max-w-md bg-slate-800 text-white border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-center text-xl">
-              Only Teachers can create sessions
-            </CardTitle>
-          </CardHeader>
-          <CardFooter>
-            <Button
-              className="w-full bg-slate-700 hover:bg-slate-600"
-              onClick={() => router.push("/home")}
-            >
-              Back to Home
-            </Button>
-          </CardFooter>
-        </Card>
-      </main>
+      <PageShell
+        title="Only therapists can create sessions"
+        subtitle="Ask your therapist to start the session for you."
+      >
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-slate-700">
+            You are logged in as{" "}
+            <span className="font-semibold">{user.email}</span> ({user.role}).
+            Only Therapist accounts can create new sessions.
+          </p>
+          <Button
+            variant="outline"
+            className="self-start"
+            onClick={() => router.push("/")}
+          >
+            Back to home
+          </Button>
+        </div>
+      </PageShell>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-900 px-4">
-      <Card className="w-full max-w-lg bg-slate-800 text-white border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-xl text-center">
-            Create a new session
-          </CardTitle>
-        </CardHeader>
+    <PageShell
+      title="Create a new speech therapy session"
+      subtitle="Invite a child to a simple, focused practice session."
+    >
+      <form
+        className="space-y-5"
+        onSubmit={handleSubmit(handleCreateSession)}
+        noValidate
+      >
+        {/* Student email */}
+        <div className="space-y-2">
+          <label htmlFor="email" className="text-sm font-medium text-slate-900">
+            Student email<span className="text-red-500">*</span>
+          </label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="student@example.com"
+            autoComplete="email"
+            {...register("email")}
+          />
+          {errors.email && (
+            <p className="text-xs text-red-500">{errors.email.message}</p>
+          )}
+        </div>
 
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="studentEmail">Student email</Label>
-            <Input
-              id="studentEmail"
-              type="email"
-              placeholder="student@example.com"
-              className="bg-white text-black"
-              value={studentEmail}
-              onChange={(e) => setStudentEmail(e.target.value)}
-              required
-            />
-          </div>
+        {/* Seed */}
+        <div className="space-y-2">
+          <label htmlFor="seed" className="text-sm font-medium text-slate-900">
+            Seed (optional, to control the board)
+          </label>
+          <select
+            id="seed"
+            {...register("seed")}
+            className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+          >
+            <option value="">Random board</option>
+            {Object.entries(SEED_LABEL_TO_ID).map(([label, id]) => (
+              <option key={id} value={label}>
+                {label}
+              </option>
+            ))}
+          </select>
+          {errors.seed && (
+            <p className="text-xs text-red-500">{errors.seed.message}</p>
+          )}
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="meetingUrl">
-              Video call URL (optional, Meet / Zoom / Jitsi / etc.)
-            </Label>
-            <Input
-              id="meetingUrl"
-              type="url"
-              placeholder="https://meet.jit.si/your-room or https://meet.google.com/..."
-              className="bg-white text-black"
-              value={meetingUrl}
-              onChange={(e) => setMeetingUrl(e.target.value)}
-            />
-            <p className="text-xs text-slate-300">
-              Create the call in your preferred provider, then paste the URL
-              here. For Jitsi, you can directly define a room URL.
+        {/* Difficulty */}
+        <div className="space-y-2">
+          <label
+            htmlFor="difficulty"
+            className="text-sm font-medium text-slate-900"
+          >
+            Board size / difficulty
+          </label>
+          <select
+            id="difficulty"
+            {...register("difficulty")}
+            className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+          >
+            <option value="easy">Easy (small board)</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard (larger board)</option>
+          </select>
+          {errors.difficulty && (
+            <p className="text-xs text-red-500">{errors.difficulty.message}</p>
+          )}
+        </div>
+
+        {/* Notes */}
+        <div className="space-y-2">
+          <label htmlFor="notes" className="text-sm font-medium text-slate-900">
+            Notes for this session (optional)
+          </label>
+          <Textarea
+            id="notes"
+            rows={3}
+            placeholder="Short notes about goals, behavior, or anything important."
+            {...register("notes")}
+          />
+          {errors.notes && (
+            <p className="text-xs text-red-500">{errors.notes.message}</p>
+          )}
+        </div>
+
+        {serverError && (
+          <p className="text-sm text-red-500" role="alert">
+            {serverError}
+          </p>
+        )}
+
+        {result && (
+          <div className="space-y-1 rounded-md bg-slate-100 p-3 text-xs text-slate-800">
+            <p>
+              <span className="font-semibold">Session ID:</span>{" "}
+              <code className="break-all">{result.sessionId}</code>
+            </p>
+            {result.seed !== undefined && (
+              <p>
+                <span className="font-semibold">Seed (backend id):</span>{" "}
+                {String(result.seed)}
+              </p>
+            )}
+            <p>
+              <span className="font-semibold">Created at:</span>{" "}
+              {result.createdAtIso}
             </p>
           </div>
+        )}
 
-          <div className="space-y-2">
-            <Label htmlFor="seed">
-              Seed (optional, for a board with specific cards)
-            </Label>
-            <Input
-              id="seed"
-              type="number"
-              className="bg-white text-black"
-              value={seed}
-              onChange={(e) => setSeed(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes (optional)</Label>
-            <Textarea
-              id="notes"
-              className="bg-white text-black"
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-
-          {error && <p className="text-sm text-red-400 text-center">{error}</p>}
-
-          {result && (
-            <div className="mt-2 rounded-md bg-slate-700 p-3 text-sm space-y-1">
-              <p>
-                <span className="font-semibold">Session ID:</span>{" "}
-                <code className="break-all">{result.sessionId}</code>
-              </p>
-              {result.seed !== undefined && (
-                <p>
-                  <span className="font-semibold">Seed:</span> {result.seed}
-                </p>
-              )}
-              <p>
-                <span className="font-semibold">Created at:</span>{" "}
-                {result.createdAtIso}
-              </p>
-            </div>
-          )}
-        </CardContent>
-
-        <CardFooter className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-3 pt-2">
           <Button
-            className="w-full bg-green-500 hover:bg-green-600"
-            onClick={handleCreateSession}
-            disabled={loading}
-          >
-            {loading ? "Creating..." : "Create session"}
-          </Button>
-
-          <Button
+            type="button"
             variant="outline"
-            className="w-full border-slate-600 text-slate-200"
-            onClick={() => router.push("/home")}
+            onClick={() => router.push("/")}
           >
-            Back to Home
+            Back to home
           </Button>
-        </CardFooter>
-      </Card>
-    </main>
+
+          <Button type="submit" disabled={!isValid || isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create session"}
+          </Button>
+        </div>
+      </form>
+    </PageShell>
   );
 }

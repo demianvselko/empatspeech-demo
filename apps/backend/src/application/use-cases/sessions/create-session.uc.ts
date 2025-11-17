@@ -20,6 +20,7 @@ export class CreateSessionUC
   async execute(
     input: CreateSessionInput,
   ): Promise<Result<CreateSessionOutput, BaseError>> {
+    console.log('🚀 ~ CreateSessionUC ~ execute ~ input:', input);
     if (input.slpId === input.studentId) {
       return Result.fail(
         new SameParticipantError(input.slpId, input.studentId),

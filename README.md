@@ -1,20 +1,120 @@
 # empatspeech-demo
 
-Comando para levantar el frontend:
+Up the proyect:
+pnpm
+
+INSTALL A NEW DEPENDENCY
+pnpm -F @app/frontend add react-hook-form zod @hookform/resolvers
 
 pnpm --filter @app/frontend dev
 
-demia@demian01 MINGW64 ~/Desktop/vilo/empatspeech-demo (feature/backend)
-$ curl -X POST <http://localhost:4000/api/v1/sessions> \
- -H "Content-Type: application/json" \
- -d '{
-"slpId": "5a7d2c4b-3f81-4b94-9a8d-bd9f7a2cbb02",
-"studentId": "8b3d1a2f-4c9b-4f1e-8a9b-b2c3d4e5f003",
-"notes": "Primera sesión demo",
-"seed": 12345
-}'
-{"sessionId":"79b55207-5f31-4acc-b2ee-811a9915e8dd","seed":12345,"createdAtIso":"2025-11-12T11:49:40.395Z"}
+Modify any type in root:
+pnpm -C packages/shared build
 
-<http://localhost:3000/sessions/79b55207-5f31-4acc-b2ee-811a9915e8dd/play?userId=5a7d2c4b-3f81-4b94-9a8d-bd9f7a2cbb02>
+Rutas/
 
-<http://localhost:3000/sessions/79b55207-5f31-4acc-b2ee-811a9915e8dd/play?userId=8b3d1a2f-4c9b-4f1e-8a9b-b2c3d4e5f003>
+Health
+
+```
+curl http://localhost:4000/v1/health
+```
+
+HealthOutput:
+{"ok":true,"timestamp":"2025-11-15T21:04:46.523Z"}
+
+```
+curl -X POST http://localhost:4000/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "teacher@example.com",
+    "role": "Teacher"
+  }'
+
+```
+
+Response: {"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....."}
+
+Save token:
+TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+Create Session:
+
+```
+curl -X POST http://localhost:4000/v1/sessions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "studentEmail": "student@example.com",
+    "notes": "Primera sesión de prueba",
+    "seed": 42
+  }'
+```
+
+CreateSessionOutput
+{
+"id": "b07ad682-6f52-4cf8-87ab-5a0e4f47a3de",
+"teacherId": "9beb1edd-8c46-476b-9eb9-50557175f686",
+"studentId": "a5bcb0e3-1c12-4e7d-9d3c-0adf19e7e001",
+"notes": "Primera sesión de prueba",
+"status": "active",
+"createdAtIso": "2025-11-15T20:00:00.000Z"
+}
+
+saved:
+SESSION_ID=68b36ec5-e4e0-44e4-a765-59df2f64d417
+
+Add Correct Trial:
+
+```
+curl -X POST http://localhost:4000/v1/sessions/$SESSION_ID/trials \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "correct": true
+  }'
+
+```
+
+AddCorrectTrialOutput:
+{
+"sessionId":"68b36ec5-e4e0-44e4-a765-59df2f64d417",
+"totalTrials":1,
+"accuracyPercent":100
+}
+
+Add incorrect Trial:
+
+```
+curl -X POST http://localhost:4000/v1/sessions/$SESSION_ID/trials   -H "Content-Type: application/json"   -H "Authorization: Bearer $TOKEN"   -d '{
+    "correct": false
+  }'
+```
+
+AddIncorrectTrialOutput:
+{"sessionId":"68b36ec5-e4e0-44e4-a765-59df2f64d417","totalTrials":2,"accuracyPercent":50}
+
+AddNotes:
+
+```
+curl -X PATCH http://localhost:4000/v1/sessions/$SESSION_ID/notes \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "notes": "New Note"
+  }'
+
+
+AddNoteOutput:
+{"sessionId":"68b36ec5-e4e0-44e4-a765-59df2f64d417","notes":"New Note"}
+
+EndSession:
+```
+
+curl -X POST <http://localhost:4000/v1/sessions/$SESSION_ID/finish> \
+ -H "Authorization: Bearer $TOKEN"
+
+```
+
+EndSessionOutput:
+{"sessionId":"68b36ec5-e4e0-44e4-a765-59df2f64d417","finishedAtIso":"2025-11-15T21:04:01.065Z"}
+```

@@ -3,13 +3,21 @@
 import { useEffect, useRef } from "react";
 import type * as PhaserNS from "phaser";
 import { createMemotestScene } from "./MemotestScene";
+import type { Difficulty } from "./types";
 
 type Props = {
   sessionId: string;
   userId: string;
+  seed?: string;
+  difficulty?: Difficulty;
 };
 
-export default function GameContainer({ sessionId, userId }: Readonly<Props>) {
+export default function GameContainer({
+  sessionId,
+  userId,
+  seed,
+  difficulty = "easy",
+}: Readonly<Props>) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<PhaserNS.Game | null>(null);
 
@@ -24,13 +32,16 @@ export default function GameContainer({ sessionId, userId }: Readonly<Props>) {
       if (!isMounted || !containerRef.current) return;
 
       const containerWidth = containerRef.current.clientWidth || 800;
+      const containerHeight = containerRef.current.clientHeight || 600;
 
-      const width = Math.min(containerWidth, 1100);
-      const height = Math.round((width * 3) / 4);
+      const width = containerWidth;
+      const height = containerHeight;
 
       const sceneClass = createMemotestScene(Phaser, {
         sessionId,
         userId,
+        difficulty,
+        seedLabel: seed,
       });
 
       const config: PhaserNS.Types.Core.GameConfig = {
@@ -52,8 +63,10 @@ export default function GameContainer({ sessionId, userId }: Readonly<Props>) {
       if (!gameRef.current || !containerRef.current) return;
 
       const containerWidth = containerRef.current.clientWidth || 800;
-      const width = Math.min(containerWidth, 1100);
-      const height = Math.round((width * 3) / 4);
+      const containerHeight = containerRef.current.clientHeight || 600;
+
+      const width = containerWidth;
+      const height = containerHeight;
 
       gameRef.current.scale.resize(width, height);
     };
@@ -70,13 +83,13 @@ export default function GameContainer({ sessionId, userId }: Readonly<Props>) {
         gameRef.current = null;
       }
     };
-  }, [sessionId, userId]);
+  }, [sessionId, userId, seed, difficulty]);
 
   return (
-    <div className="w-full flex justify-center">
+    <div className="flex h-full w-full justify-center">
       <div
         ref={containerRef}
-        className="border border-slate-600 rounded-lg overflow-hidden w-full max-w-[1100px]"
+        className="h-full w-full max-w-full overflow-hidden rounded-lg border border-slate-300"
       />
     </div>
   );

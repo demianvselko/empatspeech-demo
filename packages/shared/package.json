@@ -12,7 +12,7 @@
     "test:cov": "jest --selectProjects shared --coverage"
   },
   "dependencies": {
-    "zod": "^3.23.8"
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "typescript": "^5.6.3"
