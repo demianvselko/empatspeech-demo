@@ -1,5 +1,5 @@
 import { BaseEntity } from '@domain/base/base.entity';
-import { SessionProps, Trial } from './session.props';
+import { SessionProps, Trial, SessionDifficulty } from './session.props';
 import { CreatedAtVO, UuidVO, StringVO } from '@domain/shared/valid-objects';
 import { FinishedAtVO } from './validate-objects/finished-at.vo';
 
@@ -11,24 +11,35 @@ export class Session extends BaseEntity {
   get sessionId(): UuidVO {
     return this.props.entityId;
   }
+
   get slpId(): UuidVO {
     return this.props.slpId;
   }
+
   get studentId(): UuidVO {
     return this.props.studentId;
   }
+
   get seed(): number {
     return this.props.seed;
   }
+
+  get difficulty(): SessionDifficulty {
+    return this.props.difficulty;
+  }
+
   get createdAtVO(): CreatedAtVO {
     return this.props.createdAt;
   }
+
   get finishedAt(): FinishedAtVO | undefined {
     return this.props.finishedAt;
   }
+
   get notes(): StringVO | undefined {
     return this.props.notes;
   }
+
   get trials(): readonly Trial[] {
     return this.props.trials;
   }
@@ -85,6 +96,7 @@ export class Session extends BaseEntity {
     slpId: string;
     studentId: string;
     seed: number;
+    difficulty: SessionDifficulty;
     notes?: string;
     finishedAtIso?: string;
     finishedAtEpochMs?: number;
@@ -99,6 +111,7 @@ export class Session extends BaseEntity {
       slpId: this.slpId.valueAsString,
       studentId: this.studentId.valueAsString,
       seed: this.seed,
+      difficulty: this.difficulty,
       notes: this.notes?.valueAsString,
       finishedAtIso: this.finishedAt?.valueAsIsoString,
       finishedAtEpochMs: this.finishedAt?.valueAsEpochMs,

@@ -9,6 +9,11 @@ export type Role = z.infer<typeof Role>;
 export const SessionStatus = z.enum(["active", "completed"]);
 export type SessionStatus = z.infer<typeof SessionStatus>;
 
+/** ---------- Dificultad de la sesión / juego ---------- */
+
+export const Difficulty = z.enum(["easy", "medium", "hard"]);
+export type Difficulty = z.infer<typeof Difficulty>;
+
 /** ---------- Student domain (puede servir para el front) ---------- */
 
 export const StudentSchema = z.object({
@@ -80,5 +85,11 @@ export const GameStateSchema = z.object({
     createdAtIso: z.string(),
     finishedAtIso: z.string().optional(),
     matchedCardIds: z.array(z.string()).default([]),
+
+    // 🔥 Nuevo: seed del tablero, viene de Session.seed
+    boardSeed: z.string(),
+
+    // 🔥 Nuevo: dificultad elegida por el Teacher
+    difficulty: Difficulty,
 });
 export type GameState = z.infer<typeof GameStateSchema>;
