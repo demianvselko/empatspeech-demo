@@ -33,8 +33,7 @@ import { SESSION_REPOSITORY_TOKEN } from '@infrastructure/persistence/database/m
   cors: { origin: '*', credentials: true },
 })
 export class SessionGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
@@ -48,7 +47,7 @@ export class SessionGateway
     private readonly appendTrialUC: AppendTrialUC,
     private readonly patchNotesUC: PatchNotesUC,
     private readonly finishSessionUC: FinishSessionUC,
-  ) {}
+  ) { }
 
   handleConnection(client: Socket): void {
     console.log('[WS] client connected', {
@@ -149,7 +148,6 @@ export class SessionGateway
       return;
     }
 
-    // Validación de turno se mantiene
     if (
       (currentTurn === 'slp' && !isSlp) ||
       (currentTurn === 'student' && !isStudent)
@@ -158,8 +156,8 @@ export class SessionGateway
       return;
     }
 
-    // 👇 Aquí la clave: en base al usuario REAL, no al turno
-    const performedBy: 'slp' | 'student' = isStudent ? 'student' : 'slp';
+    // El jugador que realiza el movimiento es siempre el del turno actual.
+    const performedBy: 'slp' | 'student' = currentTurn;
 
     const ucResult = await this.appendTrialUC.execute({
       sessionId: payload.sessionId,
@@ -276,6 +274,22 @@ export class SessionGateway
     const currentTurn = this.sessionTurns.get(payload.sessionId) ?? 'slp';
     const state = this.buildGameState(updated, currentTurn);
     this.server.to(payload.sessionId).emit(WsEvents.GameStateOut, state);
+  }
+
+  async broadcastSessionState(sessionId: string): Promise<void> {
+    const idRes = UuidVO.fromString(sessionId);
+    if (idRes.isFailure()) return;
+
+    const found = await this.sessionsRepo.findById(idRes.getValue());
+    if (found.isFailure()) return;
+
+    const session = found.getValue();
+    if (!session) return;
+
+    const currentTurn = this.sessionTurns.get(sessionId) ?? 'slp';
+    const state = this.buildGameState(session, currentTurn);
+
+    this.server.to(sessionId).emit(WsEvents.GameStateOut, state);
   }
 
   private addClientToRoom(sessionId: string, clientId: string): void {
