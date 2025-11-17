@@ -1,4 +1,3 @@
-// apps/frontend/src/game/phaser/MemotestScene.ts
 "use client";
 
 import type * as PhaserNS from "phaser";
@@ -37,7 +36,6 @@ export function createMemotestScene(
   const { sessionId, userId, difficulty = "easy", seedLabel } = deps;
 
   const deck: GameCard[] = getDeckByLabel(seedLabel);
-  const boardSeed = sessionId;
 
   return class MemotestScene extends Phaser.Scene {
     private socket!: Socket;
@@ -62,13 +60,20 @@ export function createMemotestScene(
     private gameOverTitle?: PhaserNS.GameObjects.Text;
     private gameOverStats?: PhaserNS.GameObjects.Text;
 
+    private cardWidth = 120;
+    private cardHeight = 140;
+    private readonly boardPadding = {
+      top: 96,
+      right: 32,
+      bottom: 32,
+      left: 32,
+    };
+    private readonly cardGap = 16;
+
     constructor() {
       super("MemotestScene");
     }
 
-    // ------------------------------------------------------------
-    // Lifecycle
-    // ------------------------------------------------------------
     preload(): void {
       const imgs = deck.filter((c) => c.type === "image" && c.imageUrl);
       for (const card of imgs) {
@@ -77,7 +82,6 @@ export function createMemotestScene(
     }
 
     create(): void {
-      // Fondo claro, alineado al card de la UI
       this.cameras.main.setBackgroundColor(0xf9fafb);
 
       this.createHud();
@@ -88,9 +92,6 @@ export function createMemotestScene(
       // no-op por ahora
     }
 
-    // ------------------------------------------------------------
-    // WebSocket
-    // ------------------------------------------------------------
     private setupSocket(): void {
       this.socket = io(process.env.NEXT_PUBLIC_WS_URL, {
         transports: ["websocket"],
@@ -119,9 +120,6 @@ export function createMemotestScene(
       });
     }
 
-    // ------------------------------------------------------------
-    // Game state sync
-    // ------------------------------------------------------------
     private handleGameState(state: GameState): void {
       this.gameState = state;
       this.updateHud(state);
@@ -144,9 +142,6 @@ export function createMemotestScene(
       return state.currentTurn === this.getMyRole(state);
     }
 
-    // ------------------------------------------------------------
-    // HUD
-    // ------------------------------------------------------------
     private createHud(): void {
       const textStyle: PhaserNS.Types.GameObjects.Text.TextStyle = {
         fontFamily:
@@ -181,9 +176,6 @@ export function createMemotestScene(
       );
     }
 
-    // ------------------------------------------------------------
-    // Build board (difficulty + deterministic)
-    // ------------------------------------------------------------
     private buildBoard(diff: Difficulty): void {
       const cfg = difficultyPresets[diff];
 
@@ -204,7 +196,7 @@ export function createMemotestScene(
           wordCard: v.word as GameCard,
         }));
 
-      // Número de pares según difficultyPresets
+      const boardSeed = sessionId;
       pairs = shuffleDeterministic(pairs, boardSeed).slice(0, cfg.pairCount);
 
       this.totalPairs = pairs.length;
@@ -226,7 +218,7 @@ export function createMemotestScene(
           {
             id: `${pair.pairId}-txt`,
             pairId: pair.pairId,
-            kind: "text", // <-- CardKind nuevo
+            kind: "text",
             x: 0,
             y: 0,
             faceUp: true,
@@ -239,30 +231,41 @@ export function createMemotestScene(
       const shuffled = shuffleDeterministic(tempCards, boardSeed);
 
       const { width, height } = this.scale;
-      const cardW = 120;
-      const cardH = 140;
       const totalCols = cfg.cols;
       const totalRows = Math.ceil(shuffled.length / totalCols);
 
-      const boardWidth = totalCols * cardW;
-      const boardHeight = totalRows * cardH;
+      const padding = this.boardPadding;
+      const gap = this.cardGap;
 
-      const startX = width / 2 - boardWidth / 2 + cardW / 2;
-      const startY = height / 2 - boardHeight / 2 + cardH / 2 + 40;
+      const maxCardWidth = 120;
+      const maxCardHeight = 140;
 
-      shuffled.forEach((c, idx) => {
+      const availableWidth = width - padding.left - padding.right;
+      const availableHeight = height - padding.top - padding.bottom;
+
+      const rawCardWidth = (availableWidth - (totalCols - 1) * gap) / totalCols;
+      const rawCardHeight =
+        (availableHeight - (totalRows - 1) * gap) / totalRows;
+
+      this.cardWidth = Math.min(maxCardWidth, rawCardWidth);
+      this.cardHeight = Math.min(maxCardHeight, rawCardHeight);
+      const boardWidth = totalCols * this.cardWidth + (totalCols - 1) * gap;
+
+      const startX = width / 2 - boardWidth / 2 + this.cardWidth / 2;
+      const startY = padding.top + this.cardHeight / 2;
+
+      for (const [idx, c] of shuffled.entries()) {
         const col = idx % totalCols;
         const row = Math.floor(idx / totalCols);
 
-        c.x = startX + col * cardW;
-        c.y = startY + row * cardH;
+        c.x = startX + col * (this.cardWidth + gap);
+        c.y = startY + row * (this.cardHeight + gap);
 
         this.cards.push(c);
-      });
+      }
 
       this.renderCards();
 
-      // Fase de “memorización”: 5s boca arriba
       this.time.delayedCall(5000, () => {
         for (const card of this.cards) {
           if (!card.matched) card.faceUp = false;
@@ -271,34 +274,38 @@ export function createMemotestScene(
       });
     }
 
-    // ------------------------------------------------------------
-    // Render / update cards
-    // ------------------------------------------------------------
     private renderCards(): void {
       for (const card of this.cards) {
         const container = this.add.container(card.x, card.y);
 
-        // Marco de la tarjeta (fondo pastel + borde suave)
-        const rect = this.add.rectangle(0, 0, 120, 140, 0xfdfcfb);
+        const rect = this.add.rectangle(
+          0,
+          0,
+          this.cardWidth,
+          this.cardHeight,
+          0xfdfcfb,
+        );
         rect.setStrokeStyle(3, 0x93c5fd);
 
         let face: PhaserNS.GameObjects.Text | PhaserNS.GameObjects.Image;
 
         if (card.kind === "image") {
           const img = this.add.image(0, -6, card.textureKey ?? "");
-          img.setDisplaySize(86, 86);
+          const imgSize = Math.min(this.cardWidth - 30, this.cardHeight - 40);
+          img.setDisplaySize(imgSize, imgSize);
           face = img;
         } else {
           const text = this.add.text(0, 0, card.text ?? "", {
             fontFamily:
               "system-ui, -apple-system, BlinkMacSystemFont, 'Comic Neue', 'Baloo 2', sans-serif",
-            fontSize: "26px",
+            fontSize: `${Math.max(18, this.cardHeight / 5)}px`,
             color: "#1f2933",
             align: "center",
+            wordWrap: { width: this.cardWidth - 24 },
           });
 
           text.setOrigin(0.5);
-          text.setStroke("#f97316", 2); // borde naranja suave
+          text.setStroke("#f97316", 2);
           text.setShadow(1, 2, "#e5e7eb", 2, false, true);
           face = text;
         }
@@ -306,7 +313,7 @@ export function createMemotestScene(
         const back = this.add.text(0, 0, "?", {
           fontFamily:
             "system-ui, -apple-system, BlinkMacSystemFont, 'Comic Neue', 'Baloo 2', sans-serif",
-          fontSize: "30px",
+          fontSize: `${Math.max(20, this.cardHeight / 4)}px`,
           color: "#2563eb",
         });
         back.setOrigin(0.5);
@@ -318,7 +325,7 @@ export function createMemotestScene(
         container.add(face);
         container.add(back);
 
-        container.setSize(120, 140);
+        container.setSize(this.cardWidth, this.cardHeight);
         container.setInteractive({ useHandCursor: true });
         container.on("pointerdown", () => this.handleCardClick(card.id));
 
@@ -353,18 +360,15 @@ export function createMemotestScene(
         }
 
         if (card.faceUp) {
-          rect.setFillStyle(0xfefce8, 1); // amarillo claro
+          rect.setFillStyle(0xfefce8, 1);
           rect.setStrokeStyle(3, 0xfacc15);
         } else {
-          rect.setFillStyle(0xf9fafb, 1); // casi blanco
+          rect.setFillStyle(0xf9fafb, 1);
           rect.setStrokeStyle(3, 0x93c5fd);
         }
       }
     }
 
-    // ------------------------------------------------------------
-    // Match state sync + end game
-    // ------------------------------------------------------------
     private applyMatchedFromState(state: GameState): void {
       if (!state.matchedCardIds) return;
 
@@ -396,13 +400,9 @@ export function createMemotestScene(
       const myRole = this.getMyRole(state);
       const winnerRole = state.currentTurn as Role;
 
-      let title = "Game Over";
+      let title = "The next game you win!";
 
-      if (myRole !== "unknown") {
-        if (winnerRole === "unknown") title = "Game Over";
-        else if (winnerRole === myRole) title = "You win! 🎉";
-        else title = "You lost 😢";
-      }
+      if (winnerRole === myRole) title = "You are awesome! 🎉";
 
       this.gameOverOverlay = this.add
         .rectangle(width / 2, height / 2, width, height, 0x020617, 0.4)

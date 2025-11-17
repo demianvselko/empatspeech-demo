@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Copy, Check } from "lucide-react";
-
+import type { Difficulty } from "@/game/phaser/types";
 import GameContainer from "@/game/phaser/GameContainer";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ export default function SessionPlayPage() {
   const sessionId = params.sessionId;
 
   const [stableSeed, setStableSeed] = useState<string>(() => sessionId);
+  const [difficulty, setDifficulty] = useState<Difficulty>("easy");
 
   useEffect(() => {
     const seedParam = searchParams.get("seed");
@@ -36,13 +37,14 @@ export default function SessionPlayPage() {
     } else {
       setStableSeed(sessionId);
     }
-  }, [searchParams, sessionId]);
 
-  const difficultyParam = searchParams.get("difficulty");
-  const difficulty =
-    difficultyParam === "medium" || difficultyParam === "hard"
-      ? difficultyParam
-      : "easy";
+    const difficultyParam = searchParams.get("difficulty");
+    if (difficultyParam === "medium" || difficultyParam === "hard") {
+      setDifficulty(difficultyParam);
+    } else {
+      setDifficulty("easy");
+    }
+  }, [searchParams, sessionId]);
 
   if (!sessionId) {
     return (
@@ -173,9 +175,6 @@ export default function SessionPlayPage() {
                 {user.role})
               </p>
               <p className="text-xs text-slate-500">
-                Seed: <span className="font-mono">{stableSeed}</span>
-              </p>
-              <p className="text-xs text-slate-500">
                 Difficulty: <span className="font-mono">{difficulty}</span>
               </p>
               {finishedAtIso && (
@@ -241,8 +240,8 @@ export default function SessionPlayPage() {
               <h2 className="text-sm font-semibold text-slate-800">
                 Memotest game
               </h2>
-              <div className="mt-2 flex flex-1 items-center justify-center rounded-lg border border-border bg-slate-50 p-3 lg:p-4">
-                <div className="flex h-full w-full items-center justify-center">
+              <div className="mt-2 flex flex-1 rounded-lg border border-border bg-slate-50 p-3 lg:p-4">
+                <div className="relative w-full max-w-full aspect-[4/3]">
                   <GameContainer
                     sessionId={sessionId}
                     userId={user.userId}

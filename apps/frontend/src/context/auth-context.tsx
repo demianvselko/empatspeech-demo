@@ -1,9 +1,11 @@
+// apps/frontend/src/context/auth-context.tsx
 "use client";
 
 import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -35,23 +37,28 @@ function decodeJwt(token: string): JwtPayload {
 }
 
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const [state, setState] = useState<AuthState>(() => {
-    const loaded = loadAuth();
-    if (loaded) {
-      return {
-        accessToken: loaded.accessToken,
-        user: loaded.user,
-      };
-    }
-    return {
-      accessToken: null,
-      user: null,
-    };
+  // Estado inicial siempre vacío (SSR y primer render del cliente)
+  const [state, setState] = useState<AuthState>({
+    accessToken: null,
+    user: null,
   });
 
-  // Ya hidratamos desde loadAuth en el initializer,
-  // así que no necesitamos un flag separado.
-  const isLoading = false;
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Cargamos desde localStorage SOLO en el cliente, después de hidratar
+  useEffect(() => {
+    const loaded = loadAuth();
+
+    if (loaded) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setState({
+        accessToken: loaded.accessToken,
+        user: loaded.user,
+      });
+    }
+
+    setIsLoading(false);
+  }, []);
 
   const login = useCallback(async (input: LoginInput) => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
