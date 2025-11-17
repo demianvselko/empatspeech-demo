@@ -86,10 +86,10 @@ export default function GameContainer({
   }, [sessionId, userId, seed, difficulty]);
 
   return (
-    <div className="flex h-full w-full justify-center">
+    <div className="relative h-full w-full">
       <div
         ref={containerRef}
-        className="h-full w-full max-w-full overflow-hidden rounded-lg border border-slate-300"
+        className="absolute inset-0 overflow-hidden rounded-lg border border-slate-300"
       />
     </div>
   );

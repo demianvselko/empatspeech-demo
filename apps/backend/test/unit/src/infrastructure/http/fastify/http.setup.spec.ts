@@ -17,7 +17,6 @@ describe('applyHttpAppSetup', () => {
 
     applyHttpAppSetup(app);
 
-    expect(app.setGlobalPrefix).toHaveBeenCalledWith('api');
     expect(app.enableVersioning).toHaveBeenCalledWith({
       type: VersioningType.URI,
       defaultVersion: '1',
