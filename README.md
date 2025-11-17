@@ -1,14 +1,30 @@
 # empatspeech-demo
 
-Up the proyect:
-pnpm
+for up the project, you need start a dockerfile in backend for the database.
 
-INSTALL A NEW DEPENDENCY
+```bash
+npm run db:up
+```
+
+Up the backend in watch mode(in the backend folder):
+
+```bash
+npm run start:dev
+```
+
+Up the frontend in watch mode(in the frontend folder):
+
+```bash
+npm run start:dev
+```
+
+EXAMPLE IF YOU NEED INSTALL A NEW DEPENDENCY
+
+```bash
 pnpm -F @app/frontend add react-hook-form zod @hookform/resolvers
+```
 
-pnpm --filter @app/frontend dev
-
-Modify any type in root:
+If you need modify any type in root:
 pnpm -C packages/shared build
 
 Paths/
@@ -122,3 +138,55 @@ curl -X POST <http://localhost:4000/v1/sessions/$SESSION_ID/finish> \
 
 EndSessionOutput:
 {"sessionId":"68b36ec5-e4e0-44e4-a765-59df2f64d417","finishedAtIso":"2025-11-15T21:04:01.065Z"}
+
+Technical Decisions & Rationale
+Why NestJS?
+
+Strong dependency injection system → easy to test and replace components.
+
+Clean, scalable modular architecture.
+
+Native TypeScript support.
+
+Built-in support for validation, guards, interceptors, WebSockets, Swagger, etc.
+
+Why Fastify instead of Express?
+
+Faster, more efficient.
+
+Better performance under load.
+
+Why Next.js?
+
+Server Components + SSR/SSG → performance + SEO.
+
+Excellent DX and scalable frontend structure.
+
+Easy integration for a Phaser game inside React.
+
+Why Hexagonal Architecture?
+
+Domain remains independent from frameworks.
+
+Easy to replace adapters (DB, HTTP, WebSocket, etc.).
+
+Clean separation of concerns → maintainability + testability.
+
+Why Factory Method?
+
+Centralized control when creating domain entities.
+
+Prevents inconsistent or invalid objects.
+
+Ensures all entities are created through a single, validated path.
+
+Soft Deletes (active: boolean)
+
+Avoids destructive operations in the database.
+
+Safer auditing and data recovery.
+
+UUID Handling
+
+For the demo, UUIDs are generated randomly from email.
+In a real application, they would come from persistent storage.
