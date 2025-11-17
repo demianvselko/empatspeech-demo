@@ -5,6 +5,7 @@ import { BaseError } from '@domain/shared/error/base.error';
 import { UuidVO } from '@domain/shared/valid-objects';
 import { Session } from '@domain/entities/session/session.entity';
 import { SessionFactory } from '@domain/entities/session/session.factory';
+import { SessionDifficulty } from '@domain/entities/session/session.props';
 import { SessionRepositoryPort } from '@domain/ports/repository/session-repository.port';
 import { MongoMappingError } from '../mongo.errors';
 import { mapMongoError } from '../utils/map-mongo-error';
@@ -16,6 +17,7 @@ export interface SessionDocument {
   slpId: string;
   studentId: string;
   seed: number;
+  difficulty: SessionDifficulty;
   finishedAt?: Date | null;
   notes?: string | null;
   trials: Array<{ correct: boolean; tsEpochMs: number }>;
@@ -39,6 +41,7 @@ export class MongooseSessionRepository implements SessionRepositoryPort {
         slpId: doc.slpId,
         studentId: doc.studentId,
         seed: doc.seed,
+        difficulty: doc.difficulty,
         finishedAt: doc.finishedAt ?? undefined,
         notes: doc.notes ?? undefined,
         trials: doc.trials ?? [],
@@ -65,6 +68,7 @@ export class MongooseSessionRepository implements SessionRepositoryPort {
             slpId: p.slpId,
             studentId: p.studentId,
             seed: p.seed,
+            difficulty: p.difficulty,
             notes: p.notes ?? null,
             finishedAt: p.finishedAtEpochMs
               ? new Date(p.finishedAtEpochMs)
@@ -104,6 +108,7 @@ export class MongooseSessionRepository implements SessionRepositoryPort {
           slpId: doc.slpId,
           studentId: doc.studentId,
           seed: doc.seed,
+          difficulty: doc.difficulty,
           finishedAt: doc.finishedAt ?? undefined,
           notes: doc.notes ?? undefined,
           trials: doc.trials ?? [],
@@ -137,6 +142,7 @@ export class MongooseSessionRepository implements SessionRepositoryPort {
           slpId: doc.slpId,
           studentId: doc.studentId,
           seed: doc.seed,
+          difficulty: doc.difficulty,
           finishedAt: doc.finishedAt ?? undefined,
           notes: doc.notes ?? undefined,
           trials: doc.trials ?? [],

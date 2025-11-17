@@ -17,10 +17,10 @@ export class CreateSessionUC
   implements UseCase<CreateSessionInput, CreateSessionOutput>
 {
   constructor(private readonly sessions: SessionRepositoryPort) {}
+
   async execute(
     input: CreateSessionInput,
   ): Promise<Result<CreateSessionOutput, BaseError>> {
-    console.log('🚀 ~ CreateSessionUC ~ execute ~ input:', input);
     if (input.slpId === input.studentId) {
       return Result.fail(
         new SameParticipantError(input.slpId, input.studentId),
@@ -38,6 +38,7 @@ export class CreateSessionUC
       slpId: input.slpId,
       studentId: input.studentId,
       seed: input.seed,
+      difficulty: input.difficulty,
       notes: input.notes,
     });
     if (newRes.isFailure()) return Result.fail(newRes.getErrors());
@@ -50,6 +51,7 @@ export class CreateSessionUC
     return Result.ok({
       sessionId: entity.sessionId.valueAsString,
       seed: entity.seed,
+      difficulty: entity.difficulty,
       createdAtIso: entity.createdAtVO.valueAsIsoString,
     });
   }

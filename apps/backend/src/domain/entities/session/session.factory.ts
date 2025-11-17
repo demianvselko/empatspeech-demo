@@ -6,7 +6,12 @@ import {
 } from '@domain/base/base-props.factory';
 
 import { Session } from './session.entity';
-import { SessionProps, SessionPrimitives, Trial } from './session.props';
+import {
+  SessionProps,
+  SessionPrimitives,
+  Trial,
+  SessionDifficulty,
+} from './session.props';
 import { StringVO, UuidVO } from '@domain/shared/valid-objects';
 import { FinishedAtVO } from './validate-objects/finished-at.vo';
 
@@ -15,6 +20,7 @@ export class SessionFactory {
     slpId: string;
     studentId: string;
     seed?: number;
+    difficulty?: SessionDifficulty;
     notes?: string;
   }): Result<Session, BaseError> {
     const base = basePropsFactory();
@@ -38,11 +44,14 @@ export class SessionFactory {
       notesVO = vo.valueAsString.length ? vo : undefined;
     }
 
+    const difficulty: SessionDifficulty = input.difficulty ?? 'easy';
+
     const props: SessionProps = {
       ...base.getValue(),
       slpId: slp.getValue(),
       studentId: stu.getValue(),
       seed: input.seed ?? Math.floor(Math.random() * 1_000_000),
+      difficulty,
       notes: notesVO,
       trials: [],
     };
@@ -90,11 +99,14 @@ export class SessionFactory {
         }))
       : [];
 
+    const difficulty: SessionDifficulty = dto.difficulty ?? 'easy';
+
     const props: SessionProps = {
       ...base.getValue(),
       slpId: slp.getValue(),
       studentId: stu.getValue(),
       seed: dto.seed,
+      difficulty,
       notes: notesVO,
       finishedAt: finishedAtVO,
       trials,

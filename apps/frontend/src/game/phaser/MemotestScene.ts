@@ -33,7 +33,7 @@ export function createMemotestScene(
   Phaser: typeof import("phaser"),
   deps: SceneDeps,
 ) {
-  const { sessionId, userId, difficulty = "easy", seedLabel } = deps;
+  const { sessionId, userId, seedLabel } = deps;
 
   const deck: GameCard[] = getDeckByLabel(seedLabel);
 
@@ -125,7 +125,7 @@ export function createMemotestScene(
       this.updateHud(state);
 
       if (this.cards.length === 0) {
-        this.buildBoard(difficulty);
+        this.buildBoard(state.difficulty, state.boardSeed);
       }
 
       this.applyMatchedFromState(state);
@@ -176,7 +176,7 @@ export function createMemotestScene(
       );
     }
 
-    private buildBoard(diff: Difficulty): void {
+    private buildBoard(diff: Difficulty, boardSeed: string): void {
       const cfg = difficultyPresets[diff];
 
       const pairsMap = new Map<string, { image?: GameCard; word?: GameCard }>();
@@ -196,7 +196,7 @@ export function createMemotestScene(
           wordCard: v.word as GameCard,
         }));
 
-      const boardSeed = sessionId;
+      // 👉 shuffle determinístico con el seed del servidor
       pairs = shuffleDeterministic(pairs, boardSeed).slice(0, cfg.pairCount);
 
       this.totalPairs = pairs.length;
@@ -230,6 +230,8 @@ export function createMemotestScene(
 
       const shuffled = shuffleDeterministic(tempCards, boardSeed);
 
+      // 🔥 A partir de acá estaba el “resto del layout igual” que falta:
+
       const { width, height } = this.scale;
       const totalCols = cfg.cols;
       const totalRows = Math.ceil(shuffled.length / totalCols);
@@ -249,6 +251,7 @@ export function createMemotestScene(
 
       this.cardWidth = Math.min(maxCardWidth, rawCardWidth);
       this.cardHeight = Math.min(maxCardHeight, rawCardHeight);
+
       const boardWidth = totalCols * this.cardWidth + (totalCols - 1) * gap;
 
       const startX = width / 2 - boardWidth / 2 + this.cardWidth / 2;
@@ -266,6 +269,7 @@ export function createMemotestScene(
 
       this.renderCards();
 
+      // Mostrar cartas boca arriba unos segundos y luego darlas vuelta
       this.time.delayedCall(5000, () => {
         for (const card of this.cards) {
           if (!card.matched) card.faceUp = false;
