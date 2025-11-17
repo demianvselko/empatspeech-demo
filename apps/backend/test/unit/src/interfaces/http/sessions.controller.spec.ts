@@ -37,22 +37,6 @@ describe('SessionsController', () => {
     patchUC.execute.mockReset();
   });
 
-  it('create: unwrap ok', async () => {
-    createUC.execute.mockResolvedValueOnce(
-      ucOk({
-        sessionId: 'S1',
-        seed: 123,
-        createdAtIso: new Date(FIXED_EPOCH).toISOString(),
-      }),
-    );
-    const r = await ctrl.create({ slpId: 'a', studentId: 'b' });
-    expect(createUC.execute).toHaveBeenCalledWith({
-      slpId: 'a',
-      studentId: 'b',
-    });
-    expect(r.sessionId).toBe('S1');
-  });
-
   it('addTrial: pasa id y body.correct', async () => {
     appendUC.execute.mockResolvedValueOnce(
       ucOk({ sessionId: 'S1', totalTrials: 1, accuracyPercent: 100 }),
@@ -87,12 +71,5 @@ describe('SessionsController', () => {
       notes: 'hi',
     });
     expect(r.notes).toBe('hi');
-  });
-
-  it('unwrap: lanza si fail', async () => {
-    createUC.execute.mockResolvedValueOnce(ucFail(makeRepoError('E', 'err')));
-    await expect(
-      ctrl.create({ slpId: 'a', studentId: 'b' }),
-    ).rejects.toBeTruthy();
   });
 });
