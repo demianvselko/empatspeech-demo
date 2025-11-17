@@ -33,8 +33,7 @@ import { SESSION_REPOSITORY_TOKEN } from '@infrastructure/persistence/database/m
   cors: { origin: '*', credentials: true },
 })
 export class SessionGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
@@ -48,7 +47,7 @@ export class SessionGateway
     private readonly appendTrialUC: AppendTrialUC,
     private readonly patchNotesUC: PatchNotesUC,
     private readonly finishSessionUC: FinishSessionUC,
-  ) {}
+  ) { }
 
   handleConnection(client: Socket): void {
     console.log('[WS] client connected', {

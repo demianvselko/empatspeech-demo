@@ -72,4 +72,4 @@ import { SessionGateway } from '@interfaces/ws/session.gateway';
   ],
   exports: [],
 })
-export class SessionsModule {}
+export class SessionsModule { }
