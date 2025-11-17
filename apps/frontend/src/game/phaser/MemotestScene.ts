@@ -115,8 +115,11 @@ export function createMemotestScene(
       });
 
       this.socket.on("disconnect", () => {
-        this.statusText?.setText("🔌 Disconnected — reconnecting…");
-        this.statusText?.setColor("#64748b");
+        if (!this.sys?.isActive?.()) return;
+        if (!this.statusText) return;
+
+        this.statusText.setText("🔌 Disconnected — reconnecting…");
+        this.statusText.setColor("#64748b");
       });
     }
 
@@ -136,6 +139,20 @@ export function createMemotestScene(
       if (state.slpId === userId) return "slp";
       if (state.studentId === userId) return "student";
       return "unknown";
+    }
+
+    private handleSessionFinished(state: GameState): void {
+      const myRole = this.getMyRole(state);
+
+      if (typeof window === "undefined") return;
+
+      if (myRole === "slp") {
+        window.location.href = `/sessions/${state.sessionId}/summary`;
+      } else if (myRole === "student") {
+        window.location.href = "/";
+      } else {
+        window.location.href = "/";
+      }
     }
 
     private isMyTurn(state: GameState): boolean {
@@ -464,6 +481,17 @@ export function createMemotestScene(
         duration: 400,
         ease: "Quad.easeOut",
         delay: 450,
+      });
+
+      // 🔥 Después de mostrar el overlay, redirigir según el rol
+      this.time.delayedCall(3000, () => {
+        if (typeof window === "undefined") return;
+
+        if (myRole === "slp") {
+          window.location.href = `/sessions/${state.sessionId}/summary`;
+        } else if (myRole === "student") {
+          window.location.href = "/";
+        }
       });
     }
 

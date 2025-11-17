@@ -4,6 +4,13 @@ const TrialSchema = new Schema(
   {
     correct: { type: Boolean, required: true },
     tsEpochMs: { type: Number, required: true, min: 0, index: true },
+
+    performedBy: {
+      type: String,
+      enum: ['slp', 'student'],
+      default: 'slp',
+      index: true,
+    },
   },
   { _id: false },
 );
@@ -17,7 +24,9 @@ export const SessionSchema = new Schema(
     notes: { type: [String], default: [], maxlength: 2000 },
     createdAt: { type: Date, required: true, index: true },
     finishedAt: { type: Date, index: true },
+
     trials: { type: [TrialSchema], default: [] },
+
     active: { type: Boolean, default: true, index: true },
   },
   { versionKey: false, timestamps: false },

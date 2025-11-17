@@ -17,6 +17,7 @@ import { FinishSessionUC } from '@application/use-cases/sessions/finish-session.
 import { PatchNotesUC } from '@application/use-cases/sessions/patch-notes.uc';
 import { GetStudentProfileUC } from '@application/queries/get-student-profile.query';
 import { ListCaseloadUC } from '@application/queries/list-caseload.query';
+import { GetSessionSummaryUC } from '@application/use-cases/sessions/get-session-summary.uc';
 
 @Module({
   imports: [MongoPersistenceModule],
@@ -51,6 +52,13 @@ import { ListCaseloadUC } from '@application/queries/list-caseload.query';
       provide: GetStudentProfileUC,
       useFactory: (sessions: SessionRepositoryPort) =>
         new GetStudentProfileUC(sessions),
+      inject: [SESSION_REPOSITORY_TOKEN],
+    },
+
+    {
+      provide: GetSessionSummaryUC,
+      useFactory: (sessions: SessionRepositoryPort) =>
+        new GetSessionSummaryUC(sessions),
       inject: [SESSION_REPOSITORY_TOKEN],
     },
     {

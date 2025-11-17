@@ -75,6 +75,7 @@ export class MongooseSessionRepository implements SessionRepositoryPort {
             trials: p.trials.map((t) => ({
               correct: t.correct,
               tsEpochMs: t.tsEpochMs,
+              performedBy: t.performedBy,
             })),
           },
         },

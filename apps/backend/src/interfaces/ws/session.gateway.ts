@@ -1,3 +1,4 @@
+// apps/backend/src/interfaces/ws/session.gateway.ts
 import {
   ConnectedSocket,
   MessageBody,
@@ -148,6 +149,7 @@ export class SessionGateway
       return;
     }
 
+    // Validación de turno se mantiene
     if (
       (currentTurn === 'slp' && !isSlp) ||
       (currentTurn === 'student' && !isStudent)
@@ -156,9 +158,13 @@ export class SessionGateway
       return;
     }
 
+    // 👇 Aquí la clave: en base al usuario REAL, no al turno
+    const performedBy: 'slp' | 'student' = isStudent ? 'student' : 'slp';
+
     const ucResult = await this.appendTrialUC.execute({
       sessionId: payload.sessionId,
       correct: payload.correct,
+      performedBy,
     });
     if (ucResult.isFailure()) {
       this.emitDomainError(client, ucResult.getErrors());
