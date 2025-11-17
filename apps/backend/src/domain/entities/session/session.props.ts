@@ -1,5 +1,5 @@
 import { BaseProps } from '@domain/base/base-props.type';
-import { UuidVO, StringVO } from '@domain/shared/valid-objects';
+import { UuidVO } from '@domain/shared/valid-objects';
 import { FinishedAtVO } from './validate-objects/finished-at.vo';
 
 export type Trial = Readonly<{ correct: boolean; tsEpochMs: number }>;
@@ -8,12 +8,12 @@ export type SessionDifficulty = 'easy' | 'medium' | 'hard';
 
 export type SessionProps = Readonly<
   BaseProps & {
-    slpId: UuidVO; // Teacher.userId
-    studentId: UuidVO; // Student.userId
+    slpId: UuidVO;
+    studentId: UuidVO;
     seed: number;
     difficulty: SessionDifficulty;
     finishedAt?: FinishedAtVO;
-    notes?: StringVO;
+    notes: string[];
     trials: Trial[];
   }
 >;
@@ -27,6 +27,6 @@ export type SessionPrimitives = Readonly<{
   seed: number;
   difficulty?: SessionDifficulty;
   finishedAt?: Date | string | number;
-  notes?: string;
+  notes?: string[];
   trials?: Array<{ correct: boolean; tsEpochMs: number }>;
 }>;

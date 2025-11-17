@@ -5,5 +5,5 @@ export type PatchNotesInput = Readonly<{
 
 export type PatchNotesOutput = Readonly<{
   sessionId: string;
-  notes?: string;
+  notes?: string[];
 }>;

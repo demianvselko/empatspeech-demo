@@ -22,6 +22,7 @@ export async function registerFastifyPlugins(
   await fastify.register(cors, {
     origin: e.CORS_ORIGIN === '*' ? true : e.CORS_ORIGIN.split(','),
     credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
   await fastify.register(compress, { global: true });
   await fastify.register(rateLimit, {

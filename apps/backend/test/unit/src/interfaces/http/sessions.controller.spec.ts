@@ -1,11 +1,5 @@
 import { SessionsController } from '@interfaces/http/sessions.controller';
-import {
-  makeUc,
-  ucOk,
-  ucFail,
-  FIXED_EPOCH,
-  makeRepoError,
-} from '../../../../setup/mocks';
+import { makeUc, ucOk, FIXED_EPOCH } from '../../../../setup/mocks';
 
 describe('SessionsController', () => {
   const createUC = makeUc<

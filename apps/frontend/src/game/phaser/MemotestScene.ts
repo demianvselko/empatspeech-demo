@@ -49,9 +49,7 @@ export function createMemotestScene(
     private openCards: CardOnBoard[] = [];
     private inputLocked = false;
 
-    private infoText?: PhaserNS.GameObjects.Text;
-    private turnText?: PhaserNS.GameObjects.Text;
-    private accuracyText?: PhaserNS.GameObjects.Text;
+    private statusText?: PhaserNS.GameObjects.Text;
 
     private totalPairs = 0;
     private finished = false;
@@ -112,11 +110,13 @@ export function createMemotestScene(
             ? (err as { message: string }).message
             : JSON.stringify(err);
 
-        this.infoText?.setText(`Error: ${msg}`);
+        this.statusText?.setText(`⚠️ Error: ${msg}`);
+        this.statusText?.setColor("#dc2626");
       });
 
       this.socket.on("disconnect", () => {
-        this.infoText?.setText("Disconnected from server");
+        this.statusText?.setText("🔌 Disconnected — reconnecting…");
+        this.statusText?.setColor("#64748b");
       });
     }
 
@@ -143,37 +143,44 @@ export function createMemotestScene(
     }
 
     private createHud(): void {
-      const textStyle: PhaserNS.Types.GameObjects.Text.TextStyle = {
-        fontFamily:
-          "system-ui, -apple-system, BlinkMacSystemFont, 'Baloo 2', 'Comic Neue', sans-serif",
-        fontSize: "16px",
-        color: "#0f172a",
-      };
+      const bg = this.add.rectangle(0, 0, 360, 40, 0xffffff, 0.7);
+      bg.setOrigin(0, 0).setDepth(9);
+      bg.setStrokeStyle(2, 0xe2e8f0);
 
-      this.infoText = this.add
-        .text(16, 16, "Connecting...", textStyle)
-        .setDepth(10);
-
-      this.turnText = this.add.text(16, 40, "Turn: -", textStyle).setDepth(10);
-
-      this.accuracyText = this.add
-        .text(16, 64, "Trials: 0 | Accuracy: 0%", textStyle)
-        .setDepth(10);
+      this.statusText = this.add
+        .text(16, 12, "Connecting to the game…", {
+          fontFamily:
+            "system-ui, -apple-system, BlinkMacSystemFont, 'Baloo 2', 'Comic Neue', sans-serif",
+          fontSize: "20px",
+          fontStyle: "bold",
+          color: "#334155",
+        })
+        .setDepth(10)
+        .setShadow(1, 1, "#e2e8f0", 2);
     }
 
     private updateHud(state: GameState): void {
       const myTurn = this.isMyTurn(state);
+      const myRole = this.getMyRole(state);
 
-      this.infoText?.setText(
-        `Session: ${state.sessionId.slice(0, 8)}… | ${
-          myTurn ? "Your turn" : "Other player's turn"
-        }`,
-      );
+      if (!this.statusText) return;
 
-      this.turnText?.setText(`Turn: ${state.currentTurn}`);
-      this.accuracyText?.setText(
-        `Trials: ${state.totalTrials} | Accuracy: ${state.accuracyPercent}%`,
-      );
+      let message = "";
+      let color = "";
+
+      if (myRole === "unknown") {
+        message = "You are viewing as an observer";
+        color = "#475569";
+      } else if (myTurn) {
+        message = "✨ Your turn — flip two cards!";
+        color = "#16a34a";
+      } else {
+        message = "⏳ Waiting for the other participant…";
+        color = "#2563eb";
+      }
+
+      this.statusText.setText(message);
+      this.statusText.setColor(color);
     }
 
     private buildBoard(diff: Difficulty, boardSeed: string): void {
@@ -196,7 +203,6 @@ export function createMemotestScene(
           wordCard: v.word as GameCard,
         }));
 
-      // 👉 shuffle determinístico con el seed del servidor
       pairs = shuffleDeterministic(pairs, boardSeed).slice(0, cfg.pairCount);
 
       this.totalPairs = pairs.length;
@@ -229,8 +235,6 @@ export function createMemotestScene(
       }
 
       const shuffled = shuffleDeterministic(tempCards, boardSeed);
-
-      // 🔥 A partir de acá estaba el “resto del layout igual” que falta:
 
       const { width, height } = this.scale;
       const totalCols = cfg.cols;
@@ -269,7 +273,6 @@ export function createMemotestScene(
 
       this.renderCards();
 
-      // Mostrar cartas boca arriba unos segundos y luego darlas vuelta
       this.time.delayedCall(5000, () => {
         for (const card of this.cards) {
           if (!card.matched) card.faceUp = false;
@@ -464,9 +467,6 @@ export function createMemotestScene(
       });
     }
 
-    // ------------------------------------------------------------
-    // Click handler
-    // ------------------------------------------------------------
     private handleCardClick(cardId: string): void {
       if (this.finished) return;
       if (!this.gameState) return;
@@ -503,9 +503,6 @@ export function createMemotestScene(
       }
     }
 
-    // ------------------------------------------------------------
-    // Emit move to server
-    // ------------------------------------------------------------
     private sendMove(correct: boolean, cards: [string, string]): void {
       if (!this.gameState) return;
 
@@ -519,9 +516,6 @@ export function createMemotestScene(
       this.socket.emit(WsEvents.GameMoveIn, payload);
     }
 
-    // ------------------------------------------------------------
-    // Cleanup
-    // ------------------------------------------------------------
     shutdown(): void {
       this.socket?.removeAllListeners();
       this.socket?.disconnect();

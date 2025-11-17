@@ -14,7 +14,7 @@ export const SessionSchema = new Schema(
     slpId: { type: String, required: true, index: true },
     studentId: { type: String, required: true, index: true },
     seed: { type: Number, required: true, min: 0, index: true },
-    notes: { type: String, maxlength: 2000 },
+    notes: { type: [String], default: [], maxlength: 2000 },
     createdAt: { type: Date, required: true, index: true },
     finishedAt: { type: Date, index: true },
     trials: { type: [TrialSchema], default: [] },
