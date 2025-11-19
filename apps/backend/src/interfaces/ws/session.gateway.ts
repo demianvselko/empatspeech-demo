@@ -1,4 +1,3 @@
-// apps/backend/src/interfaces/ws/session.gateway.ts
 import {
   ConnectedSocket,
   MessageBody,
@@ -12,21 +11,29 @@ import { Inject } from '@nestjs/common';
 import type { Server, Socket } from 'socket.io';
 
 import type { SessionRepositoryPort } from '@domain/ports/repository/session-repository.port';
-import { AppendTrialUC } from '@application/use-cases/sessions/append-trial.uc';
-import { PatchNotesUC } from '@application/use-cases/sessions/patch-notes.uc';
-import { FinishSessionUC } from '@application/use-cases/sessions/finish-session.uc';
+
 import { UuidVO } from '@domain/shared/valid-objects';
-import type { Session } from '@domain/entities/session/session.entity';
 import type {
   SessionJoinIn,
   GameMoveIn,
   SessionNoteIn,
   SessionFinishIn,
-  GameState,
 } from '@shared/types';
-import { WsEvents, GameStateSchema } from '@shared/types';
-import { BaseError } from '@domain/shared/error/base.error';
+import { WsEvents } from '@shared/types';
 import { SESSION_REPOSITORY_TOKEN } from '@infrastructure/persistence/database/mongoose/tokens';
+
+import type { ParticipantTurn } from './session.types';
+import {
+  addClientToRoom,
+  removeClientFromAllRooms,
+} from './session-rooms.manager';
+import { buildGameState } from './session-game-state.builder';
+import { emitDomainError } from './session-error-emitter';
+import {
+  AppendTrialUC,
+  FinishSessionUC,
+  PatchNotesUC,
+} from '@application/use-cases/sessions';
 
 @WebSocketGateway({
   namespace: '/ws',
@@ -39,7 +46,7 @@ export class SessionGateway
   server!: Server;
 
   private readonly sessionRooms = new Map<string, Set<string>>();
-  private readonly sessionTurns = new Map<string, 'slp' | 'student'>();
+  private readonly sessionTurns = new Map<string, ParticipantTurn>();
   private readonly sessionMatches = new Map<string, Set<string>>();
 
   constructor(
@@ -59,11 +66,7 @@ export class SessionGateway
 
   handleDisconnect(client: Socket): void {
     console.log('[WS] client disconnected', { id: client.id });
-    for (const [sessionId, clients] of this.sessionRooms.entries()) {
-      if (clients.delete(client.id) && clients.size === 0) {
-        this.sessionRooms.delete(sessionId);
-      }
-    }
+    removeClientFromAllRooms(this.sessionRooms, client);
   }
 
   @SubscribeMessage(WsEvents.SessionJoinIn)
@@ -84,7 +87,7 @@ export class SessionGateway
       sessionIdRes.getValue(),
     );
     if (sessionResult.isFailure()) {
-      this.emitDomainError(client, sessionResult.getErrors());
+      emitDomainError(client, sessionResult.getErrors());
       return;
     }
 
@@ -104,14 +107,15 @@ export class SessionGateway
     }
 
     client.join(payload.sessionId);
-    this.addClientToRoom(payload.sessionId, client.id);
+    addClientToRoom(this.sessionRooms, payload.sessionId, client.id);
 
     if (!this.sessionTurns.has(payload.sessionId)) {
       this.sessionTurns.set(payload.sessionId, 'slp');
     }
-    const currentTurn = this.sessionTurns.get(payload.sessionId) ?? 'slp';
 
-    const state = this.buildGameState(session, currentTurn);
+    const currentTurn = this.sessionTurns.get(payload.sessionId) ?? 'slp';
+    const state = buildGameState(session, currentTurn, this.sessionMatches);
+
     this.server.to(payload.sessionId).emit(WsEvents.GameStateOut, state);
   }
 
@@ -131,16 +135,18 @@ export class SessionGateway
       sessionIdRes.getValue(),
     );
     if (sessionResult.isFailure()) {
-      this.emitDomainError(client, sessionResult.getErrors());
+      emitDomainError(client, sessionResult.getErrors());
       return;
     }
+
     const session = sessionResult.getValue();
     if (!session) {
       client.emit('error', { message: 'Session not found' });
       return;
     }
 
-    const currentTurn = this.sessionTurns.get(payload.sessionId) ?? 'slp';
+    const currentTurn: ParticipantTurn =
+      this.sessionTurns.get(payload.sessionId) ?? 'slp';
     const isSlp = session.slpId.valueAsString === payload.userId;
     const isStudent = session.studentId.valueAsString === payload.userId;
 
@@ -157,8 +163,7 @@ export class SessionGateway
       return;
     }
 
-    // El jugador que realiza el movimiento es siempre el del turno actual.
-    const performedBy: 'slp' | 'student' = currentTurn;
+    const performedBy: ParticipantTurn = currentTurn;
 
     const ucResult = await this.appendTrialUC.execute({
       sessionId: payload.sessionId,
@@ -166,7 +171,7 @@ export class SessionGateway
       performedBy,
     });
     if (ucResult.isFailure()) {
-      this.emitDomainError(client, ucResult.getErrors());
+      emitDomainError(client, ucResult.getErrors());
       return;
     }
 
@@ -179,7 +184,7 @@ export class SessionGateway
       this.sessionMatches.set(payload.sessionId, set);
     }
 
-    let nextTurn: 'slp' | 'student' = currentTurn;
+    let nextTurn: ParticipantTurn = currentTurn;
     if (!payload.correct) {
       nextTurn = currentTurn === 'slp' ? 'student' : 'slp';
     }
@@ -189,16 +194,18 @@ export class SessionGateway
       sessionIdRes.getValue(),
     );
     if (updatedResult.isFailure()) {
-      this.emitDomainError(client, updatedResult.getErrors());
+      emitDomainError(client, updatedResult.getErrors());
       return;
     }
+
     const updated = updatedResult.getValue();
     if (!updated) {
       client.emit('error', { message: 'Session not found after update' });
       return;
     }
 
-    const state = this.buildGameState(updated, nextTurn);
+    const state = buildGameState(updated, nextTurn, this.sessionMatches);
+
     this.server.to(payload.sessionId).emit(WsEvents.GameStateOut, state);
   }
 
@@ -218,7 +225,7 @@ export class SessionGateway
       notes: payload.notes,
     });
     if (ucResult.isFailure()) {
-      this.emitDomainError(client, ucResult.getErrors());
+      emitDomainError(client, ucResult.getErrors());
       return;
     }
 
@@ -226,17 +233,20 @@ export class SessionGateway
       sessionIdRes.getValue(),
     );
     if (updatedResult.isFailure()) {
-      this.emitDomainError(client, updatedResult.getErrors());
+      emitDomainError(client, updatedResult.getErrors());
       return;
     }
+
     const updated = updatedResult.getValue();
     if (!updated) {
       client.emit('error', { message: 'Session not found after note' });
       return;
     }
 
-    const currentTurn = this.sessionTurns.get(payload.sessionId) ?? 'slp';
-    const state = this.buildGameState(updated, currentTurn);
+    const currentTurn: ParticipantTurn =
+      this.sessionTurns.get(payload.sessionId) ?? 'slp';
+    const state = buildGameState(updated, currentTurn, this.sessionMatches);
+
     this.server.to(payload.sessionId).emit(WsEvents.GameStateOut, state);
   }
 
@@ -255,7 +265,7 @@ export class SessionGateway
       sessionId: payload.sessionId,
     });
     if (ucResult.isFailure()) {
-      this.emitDomainError(client, ucResult.getErrors());
+      emitDomainError(client, ucResult.getErrors());
       return;
     }
 
@@ -263,17 +273,20 @@ export class SessionGateway
       sessionIdRes.getValue(),
     );
     if (updatedResult.isFailure()) {
-      this.emitDomainError(client, updatedResult.getErrors());
+      emitDomainError(client, updatedResult.getErrors());
       return;
     }
+
     const updated = updatedResult.getValue();
     if (!updated) {
       client.emit('error', { message: 'Session not found after finish' });
       return;
     }
 
-    const currentTurn = this.sessionTurns.get(payload.sessionId) ?? 'slp';
-    const state = this.buildGameState(updated, currentTurn);
+    const currentTurn: ParticipantTurn =
+      this.sessionTurns.get(payload.sessionId) ?? 'slp';
+    const state = buildGameState(updated, currentTurn, this.sessionMatches);
+
     this.server.to(payload.sessionId).emit(WsEvents.GameStateOut, state);
   }
 
@@ -287,55 +300,10 @@ export class SessionGateway
     const session = found.getValue();
     if (!session) return;
 
-    const currentTurn = this.sessionTurns.get(sessionId) ?? 'slp';
-    const state = this.buildGameState(session, currentTurn);
+    const currentTurn: ParticipantTurn =
+      this.sessionTurns.get(sessionId) ?? 'slp';
+    const state = buildGameState(session, currentTurn, this.sessionMatches);
 
     this.server.to(sessionId).emit(WsEvents.GameStateOut, state);
-  }
-
-  private addClientToRoom(sessionId: string, clientId: string): void {
-    const set = this.sessionRooms.get(sessionId) ?? new Set<string>();
-    set.add(clientId);
-    this.sessionRooms.set(sessionId, set);
-  }
-
-  private buildGameState(
-    session: Session,
-    currentTurn: 'slp' | 'student',
-  ): GameState {
-    const p = session.toPrimitives();
-    const matchedSet = this.sessionMatches.get(p.id);
-
-    const state: GameState = {
-      sessionId: p.id,
-      slpId: p.slpId,
-      studentId: p.studentId,
-      currentTurn,
-      totalTrials: p.trials.length,
-      accuracyPercent: p.accuracyPercent,
-      notes: p.notes,
-      createdAtIso: p.createdAtIso,
-      finishedAtIso: p.finishedAtIso,
-      matchedCardIds: matchedSet ? [...matchedSet] : [],
-      boardSeed: p.seed.toString(),
-      difficulty: p.difficulty,
-    };
-
-    return GameStateSchema.parse(state);
-  }
-
-  private emitDomainError(
-    client: Socket,
-    error: BaseError | BaseError[],
-  ): void {
-    const errors = Array.isArray(error) ? error : [error];
-
-    client.emit('error', {
-      errors: errors.map((e) => ({
-        code: e.code,
-        message: e.message,
-        context: e.context ?? undefined,
-      })),
-    });
   }
 }

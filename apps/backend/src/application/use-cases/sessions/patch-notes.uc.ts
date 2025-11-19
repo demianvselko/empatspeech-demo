@@ -28,7 +28,6 @@ export class PatchNotesUC
     }
 
     if (typeof input.notes !== 'string') {
-      // Nada que agregar, devolvemos el estado actual
       return Result.ok({
         sessionId: session.sessionId.valueAsString,
         notes: [...session.notes],
@@ -37,7 +36,6 @@ export class PatchNotesUC
 
     const trimmed = input.notes.trim();
     if (trimmed.length === 0) {
-      // Nota vacía: no modificamos la sesión
       return Result.ok({
         sessionId: session.sessionId.valueAsString,
         notes: [...session.notes],
@@ -54,7 +52,6 @@ export class PatchNotesUC
 
     const finalNote = nv.getValue().valueAsString;
 
-    // 🔹 Nuevo comportamiento: agregamos nota a la lista
     const next = session.addNote(finalNote);
     const saved = await this.sessions.save(next);
     if (saved.isFailure()) return Result.fail(saved.getErrors());
